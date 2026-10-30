@@ -1,0 +1,46 @@
+{
+  "port": 54321,
+  "search_roots": [
+    "C:\\Scripts",
+    "D:",
+    "F:"
+  ],
+  "ignore_globs": [
+    "!**/$RECYCLE.BIN/**",
+    "!**/System Volume Information/**",
+    "!**/node_modules/**",
+    "!**/.git/**",
+    "!**/.venv/**",
+    "!**/venv/**",
+    "!**/AppData/Local/Temp/**",
+    "!**/AppData/Local/Packages/**",
+    "!**/AppData/Local/Microsoft/**",
+    "!**/AppData/Local/ElevatedDiagnostics/**"
+  ],
+  "ollama_host": "http://127.0.0.1:11434",
+  "ollama_model": "llama3.1:8b",
+  "llm_chain": [
+    {
+      "id": "google-gemini-flash",
+      "name": "Google Gemini 2.0 Flash",
+      "provider": "gemini",
+      "model": "gemini-2.0-flash",
+      "endpoint": "https://generativelanguage.googleapis.com",
+      "api_key": "",
+      "enabled": false,
+      "priority": 0,
+      "is_local": false
+    },
+    {
+      "id": "ollama-local-default",
+      "name": "Ollama Local (llama3.1:8b)",
+      "provider": "ollama",
+      "model": "llama3.1:8b",
+      "endpoint": "http://127.0.0.1:11434",
+      "api_key": "",
+      "enabled": false,
+      "priority": 1,
+      "is_local": true
+    }
+  ]
+}

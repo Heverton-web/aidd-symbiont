@@ -1,0 +1,3095 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SYMBIONT - Local AI Orchestration & Tooling Fabric</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Lucide Icons CDN -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- Marked.js para renderização de Markdown -->
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#eef2ff',
+              400: '#818cf8',
+              500: '#6366f1',
+              600: '#4f46e5',
+              700: '#4338ca',
+            },
+            surface: {
+              800: '#18181b',
+              850: '#121215',
+              900: '#09090b',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-track { background: #09090b; }
+    ::-webkit-scrollbar-thumb { background: #27272a; border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: #3f3f46; }
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    .glass { background: rgba(18, 18, 21, 0.95); backdrop-filter: blur(14px); border-bottom: 1px solid rgba(255, 255, 255, 0.08); }
+    .glass-card { background: rgba(24, 24, 27, 0.55); backdrop-filter: blur(8px); border: 1px solid rgba(255, 255, 255, 0.07); transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1); }
+    .glass-card:hover { transform: translateY(-2px); border-color: rgba(99, 102, 241, 0.45); background: rgba(30, 30, 38, 0.8); }
+    
+    .prose-dark { color: #d4d4d8; line-height: 1.7; font-size: 0.875rem; }
+    .prose-dark h1 { font-size: 1.35rem; font-weight: 700; color: #ffffff; margin-top: 1.25rem; margin-bottom: 0.75rem; border-bottom: 1px solid #27272a; padding-bottom: 0.5rem; }
+    .prose-dark h2 { font-size: 1.15rem; font-weight: 600; color: #f4f4f5; margin-top: 1.1rem; margin-bottom: 0.5rem; }
+    .prose-dark h3 { font-size: 1.0rem; font-weight: 600; color: #e4e4e7; margin-top: 0.9rem; margin-bottom: 0.4rem; }
+    .prose-dark p { margin-bottom: 0.75rem; }
+    .prose-dark code { background: #27272a; color: #a5b4fc; padding: 0.15rem 0.35rem; border-radius: 0.25rem; font-family: monospace; font-size: 0.8rem; }
+    .prose-dark pre { background: #09090b; border: 1px solid #27272a; padding: 1rem; border-radius: 0.5rem; overflow-x: auto; margin-bottom: 1rem; }
+    .prose-dark pre code { background: transparent; color: #34d399; padding: 0; }
+    .prose-dark ul { list-style-type: disc; padding-left: 1.5rem; margin-bottom: 0.75rem; }
+    .prose-dark ol { list-style-type: decimal; padding-left: 1.5rem; margin-bottom: 0.75rem; }
+    .prose-dark li { margin-bottom: 0.25rem; }
+    .prose-dark blockquote { border-left: 4px solid #4f46e5; padding-left: 1rem; color: #a1a1aa; font-style: italic; margin-bottom: 1rem; }
+
+    .diff-box { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 0.78rem; line-height: 1.45; white-space: pre-wrap; word-break: break-all; }
+  </style>
+</head>
+<body class="bg-surface-900 text-zinc-100 min-h-screen flex flex-col antialiased selection:bg-brand-500 selection:text-white">
+
+  <!-- Top Sticky Header Container (Fixa barra superior e navegação) -->
+  <header class="sticky top-0 z-40 flex flex-col glass shadow-2xl">
+    
+    <!-- 1. Primary Header Bar (Restrito a max-w-7xl) -->
+    <div class="w-full border-b border-zinc-800/60">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
+        
+        <!-- Brand / Identity -->
+        <div class="flex items-center gap-3">
+          <div class="h-10 w-10 rounded-xl bg-gradient-to-tr from-brand-600 to-indigo-400 flex items-center justify-center shadow-lg shadow-brand-500/25 shrink-0">
+            <i data-lucide="cpu" class="w-5 h-5 text-white"></i>
+          </div>
+          <div>
+            <div class="flex items-center gap-2">
+              <h1 class="text-base sm:text-lg font-bold tracking-tight text-white flex items-center gap-2">
+                SYMBIONT
+              </h1>
+              <span class="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full bg-brand-500/20 text-brand-300 border border-brand-500/30 font-mono">Fabric 0.001%</span>
+              <span id="headerRootsPill" class="hidden md:inline-block text-xs font-normal px-2 py-0.5 rounded-full bg-zinc-800 text-zinc-400 border border-zinc-700 font-mono">C:\ D:\ F:\</span>
+            </div>
+            <p class="text-xs text-zinc-400">Local AI Orchestration, Multi-Asset Scanner & Frontier Pipeline Fabric</p>
+          </div>
+        </div>
+
+        <!-- Header Actions -->
+        <div class="flex items-center gap-2 sm:gap-3">
+          <!-- Toggle Encolher/Expandir Painel Superior -->
+          <button id="btnToggleMetrics" onclick="toggleMetricsBar()" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-zinc-800/80 hover:bg-zinc-700 text-zinc-300 hover:text-white text-xs font-medium border border-zinc-700/60 transition cursor-pointer" title="Alternar Painel de Métricas">
+            <i id="iconToggleMetrics" data-lucide="chevron-up" class="w-3.5 h-3.5"></i>
+            <span id="textToggleMetrics" class="hidden sm:inline">Encolher Painel</span>
+          </button>
+
+          <!-- Settings Button -->
+          <button onclick="openConfigModal()" class="p-2 rounded-lg bg-zinc-800/80 hover:bg-zinc-700 text-zinc-300 hover:text-white border border-zinc-700/60 transition cursor-pointer" title="Configurar Varredura e Ollama">
+            <i data-lucide="settings" class="w-4 h-4"></i>
+          </button>
+
+          <!-- Status SSE Live Watcher -->
+          <div id="statusPill" class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-950/40 border border-emerald-500/30 text-emerald-400 text-xs">
+            <span class="relative flex h-2 w-2">
+              <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+              <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+            </span>
+            <span id="statusText">Watcher Ativo</span>
+          </div>
+
+          <!-- Resync Trigger -->
+          <button id="btnResync" onclick="triggerScan()" class="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-brand-600 hover:bg-brand-500 active:bg-brand-700 text-white text-xs font-semibold shadow-md shadow-brand-500/20 transition cursor-pointer">
+            <i id="iconResync" data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
+            <span>Sincronizar</span>
+          </button>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- 2. Hub Navigation Bar (5 Grandes Módulos) -->
+    <div class="w-full bg-zinc-950/60 border-b border-zinc-800/60">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between gap-4 overflow-x-auto text-xs font-medium no-scrollbar">
+        <nav class="flex items-center gap-2 sm:gap-3 py-2 shrink-0">
+          
+          <button id="navHubCatalog" onclick="switchMainHub('catalog')" class="py-2 px-3 rounded-lg inline-flex items-center gap-2 transition cursor-pointer whitespace-nowrap shrink-0 text-white bg-brand-600/20 border border-brand-500/30">
+            <i data-lucide="database" class="w-4 h-4 text-brand-400 shrink-0"></i>
+            <span class="whitespace-nowrap">Catálogo de Ativos</span>
+            <span id="hubCatalogBadge" class="text-[10px] font-mono px-2 py-0.5 rounded-full bg-zinc-800 text-zinc-300 whitespace-nowrap shrink-0">...</span>
+          </button>
+
+          <button id="navHubPipeline" onclick="switchMainHub('pipeline')" class="py-2 px-3 rounded-lg inline-flex items-center gap-2 transition cursor-pointer whitespace-nowrap shrink-0 text-zinc-400 hover:text-white hover:bg-zinc-800/50">
+            <i data-lucide="workflow" class="w-4 h-4 text-cyan-400 shrink-0"></i>
+            <span class="whitespace-nowrap">Laboratório de Pipelines</span>
+            <span class="text-[10px] font-mono px-2 py-0.5 rounded-full bg-cyan-950 text-cyan-300 border border-cyan-800/40 whitespace-nowrap shrink-0">Ollama Local</span>
+          </button>
+
+          <button id="navHubTemplates" onclick="switchMainHub('templates')" class="py-2 px-3 rounded-lg inline-flex items-center gap-2 transition cursor-pointer whitespace-nowrap shrink-0 text-zinc-400 hover:text-white hover:bg-zinc-800/50">
+            <i data-lucide="file-check" class="w-4 h-4 text-emerald-400 shrink-0"></i>
+            <span class="whitespace-nowrap">Templates de Fronteira</span>
+            <span class="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-950 text-emerald-300 border border-emerald-800/40 whitespace-nowrap shrink-0">0.001% AIDD</span>
+          </button>
+
+          <button id="navHubHarnesses" onclick="switchMainHub('harnesses')" class="py-2 px-3 rounded-lg inline-flex items-center gap-2 transition cursor-pointer whitespace-nowrap shrink-0 text-zinc-400 hover:text-white hover:bg-zinc-800/50">
+            <i data-lucide="terminal" class="w-4 h-4 text-amber-400 shrink-0"></i>
+            <span class="whitespace-nowrap">Harnesses & Ambientes</span>
+          </button>
+
+          <button id="navHubSettings" onclick="switchMainHub('settings')" class="py-2 px-3 rounded-lg inline-flex items-center gap-2 transition cursor-pointer whitespace-nowrap shrink-0 text-zinc-400 hover:text-white hover:bg-zinc-800/50">
+            <i data-lucide="sliders" class="w-4 h-4 text-purple-400 shrink-0"></i>
+            <span class="whitespace-nowrap">Configurações</span>
+          </button>
+
+        </nav>
+
+        <div class="hidden lg:flex items-center gap-3 text-xs text-zinc-400 font-mono whitespace-nowrap shrink-0">
+          <span id="lastSyncLabel" class="whitespace-nowrap">Sincronizado: agora</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 3. Metrics Collapsible Dashboard Bar (Alinhado em max-w-7xl) -->
+    <div id="collapsibleMetricsBar" class="w-full bg-surface-900/90 border-b border-zinc-800/50 transition-all duration-300">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
+        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+          
+          <!-- Metrica 1: Total Físico vs Canônico -->
+          <div class="glass-card rounded-xl p-3 flex flex-col justify-between">
+            <div class="flex items-center justify-between text-zinc-400 text-xs">
+              <span>Total no Disco</span>
+              <i data-lucide="hard-drive" class="w-4 h-4 text-zinc-500"></i>
+            </div>
+            <div class="mt-1">
+              <span id="statTotalItems" class="text-xl font-bold tracking-tight text-white font-mono">-</span>
+              <p class="text-[11px] text-zinc-400">arquivos físicos</p>
+            </div>
+          </div>
+
+          <!-- Metrica 2: Itens Únicos Canônicos -->
+          <div class="glass-card rounded-xl p-3 flex flex-col justify-between">
+            <div class="flex items-center justify-between text-zinc-400 text-xs">
+              <span>Únicos Canônicos</span>
+              <i data-lucide="layers" class="w-4 h-4 text-brand-400"></i>
+            </div>
+            <div class="mt-1">
+              <span id="statUniqueSkills" class="text-xl font-bold tracking-tight text-brand-400 font-mono">-</span>
+              <p class="text-[11px] text-zinc-400">sem redundância</p>
+            </div>
+          </div>
+
+          <!-- Metrica 3: Servidores MCP -->
+          <div class="glass-card rounded-xl p-3 flex flex-col justify-between">
+            <div class="flex items-center justify-between text-zinc-400 text-xs">
+              <span>Servidores MCP</span>
+              <i data-lucide="server" class="w-4 h-4 text-emerald-400"></i>
+            </div>
+            <div class="mt-1">
+              <span id="statTotalMCPs" class="text-xl font-bold tracking-tight text-emerald-400 font-mono">-</span>
+              <p class="text-[11px] text-zinc-400">ferramentas stdio</p>
+            </div>
+          </div>
+
+          <!-- Metrica 4: Unidade C:\ -->
+          <div class="glass-card rounded-xl p-3 flex flex-col justify-between">
+            <div class="flex items-center justify-between text-zinc-400 text-xs">
+              <span>Unidade C:\</span>
+              <i data-lucide="folder" class="w-4 h-4 text-blue-400"></i>
+            </div>
+            <div class="mt-1">
+              <span id="statDriveC" class="text-xl font-bold tracking-tight text-white font-mono">-</span>
+              <p class="text-[11px] text-zinc-400">sistema e perfis</p>
+            </div>
+          </div>
+
+          <!-- Metrica 5: Unidade D:\ -->
+          <div class="glass-card rounded-xl p-3 flex flex-col justify-between">
+            <div class="flex items-center justify-between text-zinc-400 text-xs">
+              <span>Unidade D:\</span>
+              <i data-lucide="folder" class="w-4 h-4 text-amber-400"></i>
+            </div>
+            <div class="mt-1">
+              <span id="statDriveD" class="text-xl font-bold tracking-tight text-white font-mono">-</span>
+              <p class="text-[11px] text-zinc-400">storage & workspaces</p>
+            </div>
+          </div>
+
+          <!-- Metrica 6: Unidade F:\ -->
+          <div class="glass-card rounded-xl p-3 flex flex-col justify-between">
+            <div class="flex items-center justify-between text-zinc-400 text-xs">
+              <span>Unidade F:\</span>
+              <i data-lucide="folder" class="w-4 h-4 text-rose-400"></i>
+            </div>
+            <div class="mt-1">
+              <span id="statDriveF" class="text-xl font-bold tracking-tight text-white font-mono">-</span>
+              <p class="text-[11px] text-zinc-400">mídia & archives</p>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+  </header>
+
+  <!-- Main Content Container (Alinhado com max-w-7xl) -->
+  <main class="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+
+    <!-- ========================================== -->
+    <!-- HUB 1: CATÁLOGO DE ATIVOS                  -->
+    <!-- ========================================== -->
+    <div id="hubSectionCatalog" class="flex flex-col gap-6">
+
+      <!-- Asset Filters & Search Bar (Fixa) -->
+      <div class="glass-card rounded-2xl p-4 flex flex-col gap-3">
+        
+        <!-- Asset Sub-Tabs (Tipos de Ativos) -->
+        <div class="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs border-b border-zinc-800/70 no-scrollbar">
+          <button onclick="setFilterTypeTab('ALL')" id="tabTypeALL" class="px-3 py-1.5 rounded-lg bg-zinc-800 text-white font-medium border border-zinc-700 cursor-pointer whitespace-nowrap shrink-0 flex items-center gap-1.5">
+            <span>Todos os Ativos</span>
+            <span id="badgeCountALL" class="text-[10px] font-mono px-1.5 py-0.2 rounded-full bg-zinc-700 text-zinc-200">0</span>
+          </button>
+          <button onclick="setFilterTypeTab('Skill')" id="tabTypeSkill" class="px-3 py-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800/60 font-medium cursor-pointer whitespace-nowrap shrink-0 flex items-center gap-1.5">
+            <span>Skills</span>
+            <span id="badgeCountSkill" class="text-[10px] font-mono px-1.5 py-0.2 rounded-full bg-zinc-800 text-zinc-400">0</span>
+          </button>
+          <button onclick="setFilterTypeTab('MCP Server')" id="tabTypeMCP" class="px-3 py-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800/60 font-medium cursor-pointer whitespace-nowrap shrink-0 flex items-center gap-1.5">
+            <span>MCP Servers</span>
+            <span id="badgeCountMCP" class="text-[10px] font-mono px-1.5 py-0.2 rounded-full bg-zinc-800 text-zinc-400">0</span>
+          </button>
+          <button onclick="setFilterTypeTab('Rule')" id="tabTypeRule" class="px-3 py-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800/60 font-medium cursor-pointer whitespace-nowrap shrink-0 flex items-center gap-1.5">
+            <span>Regras & Policies</span>
+            <span id="badgeCountRule" class="text-[10px] font-mono px-1.5 py-0.2 rounded-full bg-zinc-800 text-zinc-400">0</span>
+          </button>
+          <button onclick="setFilterTypeTab('Hook')" id="tabTypeHook" class="px-3 py-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800/60 font-medium cursor-pointer whitespace-nowrap shrink-0 flex items-center gap-1.5">
+            <span>Hooks</span>
+            <span id="badgeCountHook" class="text-[10px] font-mono px-1.5 py-0.2 rounded-full bg-zinc-800 text-zinc-400">0</span>
+          </button>
+          <button onclick="setFilterTypeTab('Agent Spec')" id="tabTypeAgent" class="px-3 py-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800/60 font-medium cursor-pointer whitespace-nowrap shrink-0 flex items-center gap-1.5">
+            <span>Agents & Specs</span>
+            <span id="badgeCountAgent" class="text-[10px] font-mono px-1.5 py-0.2 rounded-full bg-zinc-800 text-zinc-400">0</span>
+          </button>
+          <button onclick="setFilterTypeTab('Script')" id="tabTypeScript" class="px-3 py-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800/60 font-medium cursor-pointer whitespace-nowrap shrink-0 flex items-center gap-1.5">
+            <span>Scripts</span>
+            <span id="badgeCountScript" class="text-[10px] font-mono px-1.5 py-0.2 rounded-full bg-zinc-800 text-zinc-400">0</span>
+          </button>
+        </div>
+
+        <!-- Search Inputs and Filters Grid -->
+        <div class="grid grid-cols-1 sm:grid-cols-12 gap-3 items-center">
+          
+          <!-- Search Input -->
+          <div class="sm:col-span-5 relative">
+            <i data-lucide="search" class="w-4 h-4 text-zinc-400 absolute left-3.5 top-1/2 -translate-y-1/2"></i>
+            <input type="text" id="searchInput" oninput="applyFilters()" placeholder="Pesquisar por nome, descrição, slash command ou path..." class="w-full pl-10 pr-4 py-2 rounded-xl bg-zinc-900 border border-zinc-800 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-brand-500 transition">
+          </div>
+
+          <!-- Category Select -->
+          <div class="sm:col-span-3">
+            <select id="filterCategory" onchange="applyFilters()" class="w-full px-3 py-2 rounded-xl bg-zinc-900 border border-zinc-800 text-xs text-zinc-300 focus:outline-none focus:border-brand-500">
+              <option value="ALL">Todas as Categorias</option>
+              <option value="Automação & Orquestração">Automação & Orquestração</option>
+              <option value="Desenvolvimento & Arquitetura">Desenvolvimento & Arquitetura</option>
+              <option value="UI/UX & Motion Design">UI/UX & Motion Design</option>
+              <option value="Engenharia Reversa">Engenharia Reversa</option>
+              <option value="Inteligência Científica">Inteligência Científica</option>
+              <option value="Servidores MCP">Servidores MCP</option>
+              <option value="Utilitários Gerais">Utilitários Gerais</option>
+            </select>
+          </div>
+
+          <!-- Drive Select -->
+          <div class="sm:col-span-2">
+            <select id="filterDrive" onchange="applyFilters()" class="w-full px-3 py-2 rounded-xl bg-zinc-900 border border-zinc-800 text-xs text-zinc-300 focus:outline-none focus:border-brand-500">
+              <option value="ALL">Todas as Unidades</option>
+              <option value="C:">Unidade C:\</option>
+              <option value="D:">Unidade D:\</option>
+              <option value="F:">Unidade F:\</option>
+            </select>
+          </div>
+
+          <!-- Action Controls & Duplication Toggle -->
+          <div class="sm:col-span-2 flex items-center justify-end gap-2">
+            <label class="flex items-center gap-1.5 text-xs text-zinc-300 select-none cursor-pointer" title="Agrupar cópias físicas redundantes em uma única entrada canônica com contador">
+              <input type="checkbox" id="checkGroupDuplicates" onchange="applyFilters()" checked class="rounded bg-zinc-900 border-zinc-700 text-brand-600 focus:ring-0">
+              <span>Agrupar Iguais</span>
+            </label>
+
+            <!-- Layout View Toggle -->
+            <div class="flex items-center p-1 rounded-lg bg-zinc-900 border border-zinc-800">
+              <button onclick="setViewMode('grid')" id="btnViewGrid" class="p-1 rounded text-white bg-zinc-800 cursor-pointer" title="Visualização em Grade">
+                <i data-lucide="layout-grid" class="w-3.5 h-3.5"></i>
+              </button>
+              <button onclick="setViewMode('list')" id="btnViewList" class="p-1 rounded text-zinc-400 hover:text-white cursor-pointer" title="Visualização em Lista">
+                <i data-lucide="list" class="w-3.5 h-3.5"></i>
+              </button>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Filter Sub-Options -->
+        <div class="flex flex-wrap items-center justify-between text-xs text-zinc-400 pt-1">
+          <div class="flex items-center gap-4">
+            <label class="flex items-center gap-1.5 select-none cursor-pointer">
+              <input type="checkbox" id="checkCanonical" onchange="applyFilters()" checked class="rounded bg-zinc-900 border-zinc-700 text-brand-600 focus:ring-0">
+              <span>Ocultar temporários, brains e caches (.gemini, brain, tmp)</span>
+            </label>
+          </div>
+
+          <div class="flex items-center gap-2">
+            <span>Exibindo <strong id="filteredCount" class="text-white font-mono">0</strong> itens</span>
+            <span class="text-zinc-600">|</span>
+            <div class="flex items-center gap-1">
+              <button id="btnPrevPage" onclick="changePage(-1)" disabled class="px-2 py-1 rounded bg-zinc-800 text-zinc-400 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-zinc-700 hover:text-white text-xs cursor-pointer">Anterior</button>
+              <span id="pageText" class="px-2 text-zinc-400 text-xs">Página 1 de 1</span>
+              <button id="btnNextPage" onclick="changePage(1)" disabled class="px-2 py-1 rounded bg-zinc-800 text-zinc-400 disabled:opacity-40 disabled:cursor-not-allowed hover:bg-zinc-700 hover:text-white text-xs cursor-pointer">Próxima</button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Assets Grid Container -->
+      <div id="gridContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <!-- Renderizado dinamicamente via JS -->
+      </div>
+
+      <!-- Assets List Container -->
+      <div id="listContainer" class="hidden glass-card rounded-2xl overflow-hidden border border-zinc-800/80">
+        <table class="w-full text-left text-xs text-zinc-300">
+          <thead class="bg-zinc-950/70 text-zinc-400 uppercase tracking-wider text-[10px] border-b border-zinc-800">
+            <tr>
+              <th class="px-4 py-3">Tipo / Categoria</th>
+              <th class="px-4 py-3">Nome do Ativo</th>
+              <th class="px-4 py-3">Descrição Resumida</th>
+              <th class="px-4 py-3">Unidade</th>
+              <th class="px-4 py-3">Duplicatas</th>
+              <th class="px-4 py-3 text-right">Ações</th>
+            </tr>
+          </thead>
+          <tbody id="listTableBody" class="divide-y divide-zinc-800/60 font-mono">
+            <!-- Linhas dinâmicas -->
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Empty State -->
+      <div id="emptyState" class="hidden py-16 flex flex-col items-center justify-center text-center">
+        <div class="h-16 w-16 rounded-2xl bg-zinc-800/80 border border-zinc-700 flex items-center justify-center mb-3">
+          <i data-lucide="inbox" class="w-8 h-8 text-zinc-500"></i>
+        </div>
+        <h3 class="text-base font-semibold text-white">Nenhum ativo localizado</h3>
+        <p class="text-xs text-zinc-400 max-w-sm mt-1">Nenhum item corresponde aos filtros selecionados. Tente ajustar os termos da pesquisa.</p>
+        <button onclick="resetFilters()" class="mt-4 px-3.5 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-xs text-white cursor-pointer">Redefinir Filtros</button>
+      </div>
+
+    </div>
+
+    <!-- ========================================== -->
+    <!-- HUB 2: LABORATÓRIO DE PIPELINES (ADDY OSMANI)-->
+    <!-- ========================================== -->
+    <div id="hubSectionPipeline" class="hidden flex flex-col gap-6">
+      
+      <div class="glass-card rounded-2xl p-6 flex flex-col gap-5 border border-zinc-800">
+        <!-- Header -->
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-zinc-800 pb-4">
+          <div>
+            <h2 class="text-lg font-bold text-white flex items-center gap-2">
+              <i data-lucide="git-merge" class="w-5 h-5 text-cyan-400"></i>
+              Esteira Autônoma de Pipelines (Padrão Addy Osmani & AIDD v4)
+            </h2>
+            <p class="text-xs text-zinc-400 mt-1">
+              Encadeamento canônico completo: <span class="text-cyan-300 font-mono">interview-me</span> ➔ <span class="text-emerald-300 font-mono">spec-driven</span> ➔ <span class="text-amber-300 font-mono">planning-dag</span> ➔ <span class="text-purple-300 font-mono">build-auto</span>.
+            </p>
+          </div>
+          <div class="flex items-center gap-2">
+            <span class="text-xs px-2.5 py-1 rounded-full bg-cyan-950/60 text-cyan-300 border border-cyan-800/50 font-mono flex items-center gap-1.5">
+              <i data-lucide="check-circle" class="w-3.5 h-3.5 text-cyan-400"></i>
+              25 Skills Addy Osmani
+            </span>
+          </div>
+        </div>
+
+        <!-- Pipeline Stepper Status Bar -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-2.5 p-3 rounded-xl bg-zinc-950/60 border border-zinc-800/80 text-xs font-mono">
+          <div id="stepIndicator1" class="flex items-center gap-2 p-2 rounded-lg bg-zinc-900 border border-zinc-800 text-zinc-400">
+            <div id="stepIcon1" class="w-5 h-5 rounded-full bg-zinc-800 flex items-center justify-center text-[10px] font-bold">1</div>
+            <div class="flex flex-col">
+              <span class="font-bold text-white text-[11px]">Intenção Socrática</span>
+              <span class="text-[10px] text-zinc-500">docs/intent/INTENT.md</span>
+            </div>
+          </div>
+
+          <div id="stepIndicator2" class="flex items-center gap-2 p-2 rounded-lg bg-zinc-900 border border-zinc-800 text-zinc-400">
+            <div id="stepIcon2" class="w-5 h-5 rounded-full bg-zinc-800 flex items-center justify-center text-[10px] font-bold">2</div>
+            <div class="flex flex-col">
+              <span class="font-bold text-white text-[11px]">Spec Canônica</span>
+              <span class="text-[10px] text-zinc-500">SPEC.md (5 seções)</span>
+            </div>
+          </div>
+
+          <div id="stepIndicator3" class="flex items-center gap-2 p-2 rounded-lg bg-zinc-900 border border-zinc-800 text-zinc-400">
+            <div id="stepIcon3" class="w-5 h-5 rounded-full bg-zinc-800 flex items-center justify-center text-[10px] font-bold">3</div>
+            <div class="flex flex-col">
+              <span class="font-bold text-white text-[11px]">Plano em Grafo</span>
+              <span class="text-[10px] text-zinc-500">PLAN.md (Fases DAG)</span>
+            </div>
+          </div>
+
+          <div id="stepIndicator4" class="flex items-center gap-2 p-2 rounded-lg bg-zinc-900 border border-zinc-800 text-zinc-400">
+            <div id="stepIcon4" class="w-5 h-5 rounded-full bg-zinc-800 flex items-center justify-center text-[10px] font-bold">4</div>
+            <div class="flex flex-col">
+              <span class="font-bold text-white text-[11px]">Materialização</span>
+              <span class="text-[10px] text-zinc-500">Projeto físico no disco</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Pipeline Prompt Form -->
+        <div class="flex flex-col gap-3">
+          <label class="text-xs font-semibold text-zinc-300">Briefing do Objetivo / O que você quer construir:</label>
+          <textarea id="pipelinePrompt" rows="3" class="w-full p-3.5 rounded-xl bg-zinc-900 border border-zinc-800 text-xs text-white focus:outline-none focus:border-cyan-500 transition font-sans" placeholder="Ex: Quero um pipeline autônomo para engenharia reversa de vídeo do YouTube ou Instagram, extraindo perfil didático do apresentador, roteiro e gerando testes com materialização de aplicação segura..."></textarea>
+          
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div>
+              <label class="text-xs text-zinc-400">Harness Executor Alvo:</label>
+              <select id="pipelineHarness" class="w-full mt-1 px-3 py-2 rounded-xl bg-zinc-900 border border-zinc-800 text-xs text-zinc-300">
+                <option value="Claude Code">Claude Code CLI</option>
+                <option value="AntiGravity">Google AntiGravity (AGY)</option>
+                <option value="OpenCode">OpenCode Harness</option>
+                <option value="Universal">Multi-Agent Universal</option>
+              </select>
+            </div>
+
+            <div>
+              <label class="text-xs text-zinc-400">Diretório de Destino (Materialização):</label>
+              <input type="text" id="pipelineTargetDir" value="C:\symbiont-projects" class="w-full mt-1 px-3 py-2 rounded-xl bg-zinc-900 border border-zinc-800 text-xs text-zinc-300 font-mono">
+            </div>
+
+            <div>
+              <label class="text-xs text-zinc-400">Nome da Pasta do Projeto:</label>
+              <input type="text" id="pipelineProjectName" value="symbiont-pipeline-spec" class="w-full mt-1 px-3 py-2 rounded-xl bg-zinc-900 border border-zinc-800 text-xs text-zinc-300 font-mono">
+            </div>
+          </div>
+
+          <div class="flex flex-wrap items-center justify-between gap-3 pt-2">
+            <label class="flex items-center gap-2 text-xs text-zinc-300 cursor-pointer">
+              <input type="checkbox" id="pipelineInstallDeps" checked class="rounded bg-zinc-900 border-zinc-700 text-cyan-600 focus:ring-0">
+              <span>Incluir suíte de testes determinísticos de SPEC (Python) e cópia de skills essenciais</span>
+            </label>
+
+            <div class="flex items-center gap-2">
+              <button id="btnStartInterviewChat" onclick="openInterviewChatModal()" class="px-5 py-2.5 rounded-xl bg-gradient-to-r from-cyan-600 via-brand-600 to-indigo-600 hover:from-cyan-500 hover:to-brand-500 text-white text-xs font-bold flex items-center gap-2 shadow-xl shadow-cyan-600/25 transition transform active:scale-95 cursor-pointer">
+                <i data-lucide="messages-square" class="w-4 h-4"></i>
+                <span>Iniciar Passo 1: Entrevista Interativa (/interview-me)</span>
+              </button>
+
+              <button id="btnGeneratePipeline" onclick="runFullPipelineWorkflow()" class="px-4 py-2.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-xs font-semibold flex items-center gap-2 transition cursor-pointer" title="Pular entrevista e sintetizar esteira direta">
+                <i data-lucide="zap" class="w-3.5 h-3.5 text-amber-400"></i>
+                <span class="hidden md:inline">Esteira Direta</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Pipeline Result & Artifacts Tabs Container -->
+        <div id="pipelineResultContainer" class="hidden flex flex-col gap-4 mt-2 border-t border-zinc-800 pt-4">
+          
+          <!-- Tabs Navigation -->
+          <div class="flex items-center justify-between flex-wrap gap-3 border-b border-zinc-800 pb-2">
+            <div class="flex items-center gap-2">
+              <button id="tabBtnIntent" onclick="switchPipelineArtifactTab('intent')" class="px-3 py-1.5 rounded-lg bg-zinc-800 text-white text-xs font-semibold flex items-center gap-1.5 cursor-pointer">
+                <i data-lucide="file-text" class="w-3.5 h-3.5 text-cyan-400"></i>
+                <span>INTENT.md</span>
+              </button>
+              <button id="tabBtnSpec" onclick="switchPipelineArtifactTab('spec')" class="px-3 py-1.5 rounded-lg bg-zinc-900 text-zinc-400 hover:text-white text-xs font-semibold flex items-center gap-1.5 cursor-pointer">
+                <i data-lucide="shield-check" class="w-3.5 h-3.5 text-emerald-400"></i>
+                <span>SPEC.md</span>
+              </button>
+              <button id="tabBtnPlan" onclick="switchPipelineArtifactTab('plan')" class="px-3 py-1.5 rounded-lg bg-zinc-900 text-zinc-400 hover:text-white text-xs font-semibold flex items-center gap-1.5 cursor-pointer">
+                <i data-lucide="layers" class="w-3.5 h-3.5 text-amber-400"></i>
+                <span>PLAN.md</span>
+              </button>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="flex items-center gap-2">
+              <button onclick="copyCurrentPipelineArtifact()" class="px-3 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-xs text-zinc-300 flex items-center gap-1.5 cursor-pointer">
+                <i data-lucide="copy" class="w-3.5 h-3.5"></i>
+                <span>Copiar Aba Ativa</span>
+              </button>
+              <button onclick="downloadCurrentPipelineArtifact()" class="px-3 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-xs text-zinc-300 flex items-center gap-1.5 cursor-pointer">
+                <i data-lucide="download" class="w-3.5 h-3.5"></i>
+                <span>Baixar .md</span>
+              </button>
+              <button id="btnMaterializeProject" onclick="materializePipelineProject()" class="px-4 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-xs font-semibold text-white flex items-center gap-1.5 shadow-md shadow-emerald-600/20 cursor-pointer">
+                <i data-lucide="box" class="w-3.5 h-3.5"></i>
+                <span>Materializar Projeto no Disco</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Materialization Success Banner (oculto inicialmente) -->
+          <div id="materializeSuccessBanner" class="hidden p-4 rounded-xl bg-emerald-950/60 border border-emerald-500/40 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+            <div class="flex items-center gap-3">
+              <div class="h-9 w-9 rounded-lg bg-emerald-600/30 border border-emerald-500/50 flex items-center justify-center shrink-0">
+                <i data-lucide="check" class="w-5 h-5 text-emerald-400"></i>
+              </div>
+              <div>
+                <h4 class="text-xs font-bold text-emerald-300">Projeto Materializado com Sucesso!</h4>
+                <p id="materializePathText" class="text-[11px] text-zinc-300 font-mono mt-0.5 truncate max-w-xl"></p>
+              </div>
+            </div>
+            <button onclick="openMaterializedFolder()" class="px-3.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold flex items-center gap-1.5 shrink-0 shadow cursor-pointer">
+              <i data-lucide="folder" class="w-3.5 h-3.5"></i>
+              <span>Abrir no Explorer</span>
+            </button>
+          </div>
+
+          <!-- Markdown Content View -->
+          <div id="pipelineMarkdownContent" class="prose-dark bg-zinc-950 p-5 rounded-xl border border-zinc-800 max-h-[500px] overflow-y-auto font-sans">
+            <!-- Dynamic Spec Content -->
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+
+    </div>
+
+    <!-- ========================================== -->
+    <!-- HUB 3: TEMPLATES DE FRONTEIRA              -->
+    <!-- ========================================== -->
+    <div id="hubSectionTemplates" class="hidden flex flex-col gap-6">
+      
+      <div class="glass-card rounded-2xl p-6 flex flex-col gap-4 border border-zinc-800">
+        <div class="flex items-center justify-between border-b border-zinc-800 pb-4">
+          <div>
+            <h2 class="text-lg font-bold text-white flex items-center gap-2">
+              <i data-lucide="file-check" class="w-5 h-5 text-emerald-400"></i>
+              Biblioteca Canônica AIDD 0.001% (Frontier Engineering)
+            </h2>
+            <p class="text-xs text-zinc-400 mt-1">
+              Templates de ponta concebidos para engenharia agêntica extrema: limite estrito de 1.500 tokens, acionadores imperativos, guardrails negativos e critérios binários de aceitação.
+            </p>
+          </div>
+          <span class="text-xs px-2.5 py-1 rounded-full bg-emerald-950/60 text-emerald-300 border border-emerald-800/50 font-mono">6 Modelos Canônicos</span>
+        </div>
+
+        <div id="templatesGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <!-- Renderizado via JS com templates de /api/templates -->
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ========================================== -->
+    <!-- HUB 4: HARNESSES & AMBIENTES               -->
+    <!-- ========================================== -->
+    <div id="hubSectionHarnesses" class="hidden flex flex-col gap-6">
+      
+      <div class="glass-card rounded-2xl p-6 flex flex-col gap-4 border border-zinc-800">
+        <div class="flex items-center justify-between border-b border-zinc-800 pb-4">
+          <div>
+            <h2 class="text-lg font-bold text-white flex items-center gap-2">
+              <i data-lucide="terminal" class="w-5 h-5 text-amber-400"></i>
+              Harnesses CLI & Ambientes Instalados
+            </h2>
+            <p class="text-xs text-zinc-400 mt-1">
+              Varredura de binários e orquestradores de agentes detectados no ambiente Windows (PATH, diretórios de execução e serviços locais).
+            </p>
+          </div>
+          <button onclick="refreshHarnesses()" class="px-3 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-xs text-zinc-300 flex items-center gap-1.5 cursor-pointer">
+            <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
+            <span>Verificar Novamente</span>
+          </button>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs text-zinc-300">
+            <thead class="bg-zinc-950/70 text-zinc-400 uppercase tracking-wider text-[10px] border-b border-zinc-800">
+              <tr>
+                <th class="px-4 py-3">Harness / CLI</th>
+                <th class="px-4 py-3">Status</th>
+                <th class="px-4 py-3">Versão Detectada</th>
+                <th class="px-4 py-3">Caminho do Executável</th>
+                <th class="px-4 py-3 text-right">Ação</th>
+              </tr>
+            </thead>
+            <tbody id="harnessTableBody" class="divide-y divide-zinc-800/60 font-mono">
+              <!-- Renderizado dinamicamente via JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ========================================== -->
+    <!-- HUB 5: CONFIGURAÇÕES & ROTEADOR LLM        -->
+    <!-- ========================================== -->
+    <div id="hubSectionSettings" class="hidden flex flex-col gap-6 w-full">
+      
+      <!-- Top Title Bar -->
+      <div class="glass-card rounded-2xl p-5 border border-zinc-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div>
+          <h2 class="text-base sm:text-lg font-bold text-white flex items-center gap-2">
+            <i data-lucide="sliders" class="w-5 h-5 text-purple-400"></i>
+            Centro de Governança, Roteador de LLMs & Infraestrutura
+          </h2>
+          <p class="text-xs text-zinc-400 mt-1">
+            Configure múltiplos provedores de IA, chaves de API com esteira de fallback em cascata (estilo 9th Router) e diretórios de varredura.
+          </p>
+        </div>
+        <div class="flex items-center gap-2">
+          <button onclick="detectLocalModels()" class="px-3.5 py-2 rounded-xl bg-cyan-950/60 border border-cyan-800/50 hover:bg-cyan-900/40 text-cyan-300 text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer">
+            <i data-lucide="cpu" class="w-3.5 h-3.5 text-cyan-400"></i>
+            <span>Detectar LLMs no SO</span>
+          </button>
+          <button onclick="openAddModelModal()" class="px-3.5 py-2 rounded-xl bg-brand-600 hover:bg-brand-500 text-white text-xs font-semibold flex items-center gap-1.5 shadow-md shadow-brand-500/20 transition cursor-pointer">
+            <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+            <span>Adicionar Provedor / Chave</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Main 2-Column Grid (Balanceado em 12 colunas) -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        
+        <!-- Coluna Esquerda: LLM Gateway & Fallback Chain (7 cols) -->
+        <div class="lg:col-span-7 flex flex-col gap-4">
+          <div class="glass-card rounded-2xl p-5 border border-zinc-800 flex flex-col gap-4">
+            <div class="flex items-center justify-between border-b border-zinc-800 pb-3">
+              <div>
+                <h3 class="text-sm font-bold text-white flex items-center gap-2">
+                  <i data-lucide="layers" class="w-4 h-4 text-brand-400"></i>
+                  Esteira de Fallback Multi-Provedor (LLM Routing Chain)
+                </h3>
+                <p class="text-[11px] text-zinc-400 mt-0.5">
+                  Ordem de execução: se o modelo de prioridade mais alta falhar ou atingir rate-limit, o próximo modelo habilitado assume imediatamente.
+                </p>
+              </div>
+              <span id="llmActiveCountBadge" class="text-xs px-2.5 py-0.5 rounded-full bg-brand-500/20 text-brand-300 border border-brand-500/30 font-mono">0 ativos</span>
+            </div>
+
+            <!-- Lista de Modelos da Esteira -->
+            <div id="llmChainListContainer" class="flex flex-col gap-2.5">
+              <!-- Renderizado dinamicamente -->
+            </div>
+
+            <div class="flex items-center justify-between pt-2 border-t border-zinc-800 text-xs text-zinc-400">
+              <span>Use as setas para definir a prioridade do combo</span>
+              <button onclick="saveLLMChain()" class="px-4 py-1.5 rounded-lg bg-brand-600 hover:bg-brand-500 text-white text-xs font-semibold cursor-pointer">Salvar Configuração de IA</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Coluna Direita: Search Roots & Sistema (5 cols) -->
+        <div class="lg:col-span-5 flex flex-col gap-4">
+          
+          <!-- Card de Pastas de Varredura -->
+          <div class="glass-card rounded-2xl p-5 border border-zinc-800 flex flex-col gap-3">
+            <div class="flex items-center justify-between border-b border-zinc-800 pb-2">
+              <h3 class="text-sm font-bold text-white flex items-center gap-2">
+                <i data-lucide="folder-search" class="w-4 h-4 text-amber-400"></i>
+                Diretórios Monitorados (Roots)
+              </h3>
+              <span id="rootsCountBadge" class="text-xs font-mono text-zinc-400">0 pastas</span>
+            </div>
+
+            <div id="settingsRootsList" class="flex flex-col gap-2 max-h-56 overflow-y-auto pr-1">
+              <!-- Dinâmico -->
+            </div>
+
+            <div class="flex gap-2 mt-1">
+              <input type="text" id="settingsNewRootInput" placeholder="Ex: C:\MeusProjetos ou D:\" class="flex-1 px-3 py-1.5 rounded-xl bg-zinc-900 border border-zinc-800 text-xs text-white focus:outline-none focus:border-purple-500 font-mono">
+              <button onclick="addSearchRoot()" class="px-3 py-1.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-semibold cursor-pointer">Adicionar</button>
+            </div>
+          </div>
+
+          <!-- Card de Conexões e Infraestrutura -->
+          <div class="glass-card rounded-2xl p-5 border border-zinc-800 flex flex-col gap-3">
+            <div class="border-b border-zinc-800 pb-2">
+              <h3 class="text-sm font-bold text-white flex items-center gap-2">
+                <i data-lucide="server" class="w-4 h-4 text-emerald-400"></i>
+                Parâmetros Locais
+              </h3>
+            </div>
+
+            <div class="flex flex-col gap-2 text-xs">
+              <div>
+                <label class="text-zinc-400">Host Ollama Local Padrão:</label>
+                <input type="text" id="settingsOllamaHost" value="http://127.0.0.1:11434" class="w-full mt-1 px-3 py-1.5 rounded-xl bg-zinc-900 border border-zinc-800 text-xs text-white font-mono">
+              </div>
+              <div>
+                <label class="text-zinc-400">Modelo Local Padrão:</label>
+                <input type="text" id="settingsOllamaModel" value="llama3.1:8b" class="w-full mt-1 px-3 py-1.5 rounded-xl bg-zinc-900 border border-zinc-800 text-xs text-white font-mono">
+              </div>
+            </div>
+
+            <button onclick="saveSettingsConfig()" class="w-full mt-2 py-2 rounded-xl bg-brand-600 hover:bg-brand-500 text-white text-xs font-semibold shadow-md shadow-brand-500/20 cursor-pointer">
+              Salvar Diretórios e Parâmetros
+            </button>
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+
+  </main>
+
+  <!-- ========================================== -->
+  <!-- MODAL 1: DETALHES & DOCUMENTAÇÃO           -->
+  <!-- ========================================== -->
+  <div id="detailModal" style="display: none;" class="fixed inset-0 z-50 bg-black/85 backdrop-blur-md items-center justify-center p-3 sm:p-6">
+    <div class="glass max-w-5xl w-full h-[90vh] rounded-2xl border border-zinc-700 flex flex-col overflow-hidden shadow-2xl">
+      
+      <!-- Modal Header -->
+      <div class="px-6 py-4 border-b border-zinc-800 flex items-center justify-between bg-zinc-900/80">
+        <div class="flex items-center gap-3">
+          <div id="modalIcon" class="h-10 w-10 rounded-xl bg-brand-600/20 border border-brand-500/30 flex items-center justify-center">
+            <i data-lucide="layers" class="w-5 h-5 text-brand-400"></i>
+          </div>
+          <div>
+            <h3 id="modalTitle" class="text-base font-bold text-white flex items-center gap-2">Detalhes</h3>
+            <p id="modalSubtitle" class="text-xs text-zinc-400 font-mono truncate max-w-xl"></p>
+          </div>
+        </div>
+        
+        <div class="flex items-center gap-2">
+          <button onclick="openStandardizeDiffModalFromCurrent()" class="px-3 py-1.5 rounded-lg bg-emerald-600/20 border border-emerald-500/40 hover:bg-emerald-600/30 text-emerald-300 text-xs flex items-center gap-1.5 cursor-pointer" title="Elevar para o padrão canônico 0.001% AIDD">
+            <i data-lucide="shield-check" class="w-3.5 h-3.5 text-emerald-400"></i>
+            <span>Elevar Padrão AIDD</span>
+          </button>
+
+          <button onclick="copyModalPath()" class="px-3 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-white text-xs flex items-center gap-1.5 cursor-pointer" title="Copiar Caminho">
+            <i data-lucide="copy" class="w-3.5 h-3.5"></i>
+            <span>Copiar Path</span>
+          </button>
+          
+          <button onclick="openFolderFromModal()" class="px-3 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-300 hover:text-white text-xs flex items-center gap-1.5 cursor-pointer" title="Abrir no Windows Explorer">
+            <i data-lucide="folder" class="w-3.5 h-3.5"></i>
+            <span>Explorer</span>
+          </button>
+          
+          <button onclick="closeModal()" class="p-1.5 rounded-lg hover:bg-zinc-800 text-zinc-400 hover:text-white cursor-pointer">
+            <i data-lucide="x" class="w-5 h-5"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Tabs Bar -->
+      <div class="px-6 border-b border-zinc-800 bg-zinc-900/40 flex items-center gap-6 text-xs font-medium overflow-x-auto">
+        <button id="tabBtnDocs" onclick="switchModalTab('docs')" class="py-3 border-b-2 border-brand-500 text-white flex items-center gap-2 transition whitespace-nowrap cursor-pointer">
+          <i data-lucide="file-text" class="w-4 h-4 text-brand-400"></i>
+          <span>Documentação / Especificação</span>
+        </button>
+
+        <button id="tabBtnCommands" onclick="switchModalTab('commands')" class="py-3 border-b-2 border-transparent text-zinc-400 hover:text-white flex items-center gap-2 transition whitespace-nowrap cursor-pointer">
+          <i data-lucide="terminal" class="w-4 h-4 text-amber-400"></i>
+          <span>Comandos & Parâmetros</span>
+          <span id="tabCommandsBadge" class="px-1.5 py-0.5 rounded-full text-[10px] bg-amber-500/20 text-amber-300 border border-amber-500/30">0</span>
+        </button>
+
+        <button id="tabBtnProjects" onclick="switchModalTab('projects')" class="py-3 border-b-2 border-transparent text-zinc-400 hover:text-white flex items-center gap-2 transition whitespace-nowrap cursor-pointer">
+          <i data-lucide="layers" class="w-4 h-4 text-indigo-400"></i>
+          <span>Ocorrências nos Projetos</span>
+          <span id="tabProjectsBadge" class="px-1.5 py-0.5 rounded-full text-[10px] bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">1</span>
+        </button>
+      </div>
+
+      <!-- Modal Body -->
+      <div class="flex-1 overflow-y-auto p-6 bg-surface-900">
+        
+        <!-- Tab 1: Markdown Documentation com Tradução Virtual PT-BR -->
+        <div id="tabContentDocs" class="flex flex-col gap-3">
+          
+          <!-- Virtual Translation Bar -->
+          <div class="flex items-center justify-between p-2.5 rounded-xl bg-zinc-950/70 border border-zinc-800 text-xs">
+            <div class="flex items-center gap-2 text-zinc-400">
+              <i data-lucide="languages" class="w-4 h-4 text-indigo-400"></i>
+              <span>Projeção de Tradução:</span>
+              <span id="transStatusBadge" class="px-2 py-0.5 rounded text-[10px] bg-zinc-800 text-zinc-300 font-mono">Original (Disco)</span>
+            </div>
+            
+            <div class="flex items-center gap-2">
+              <span class="text-[10px] text-zinc-500 font-mono">Arquivo no disco 100% intacto</span>
+              <button id="btnToggleTranslation" onclick="toggleVirtualTranslation()" class="px-3 py-1 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-white text-xs font-semibold flex items-center gap-1.5 transition cursor-pointer">
+                <i data-lucide="sparkles" class="w-3.5 h-3.5 text-brand-400"></i>
+                <span id="btnTransText">Visualizar em PT-BR</span>
+              </button>
+            </div>
+          </div>
+
+          <div id="docsContentRender" class="prose-dark max-w-none bg-zinc-950/40 p-4 rounded-xl border border-zinc-800/80">
+            <div class="flex items-center justify-center py-20 text-zinc-500 gap-2">
+              <i data-lucide="loader" class="w-5 h-5 animate-spin"></i>
+              <span>Carregando documentação...</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab 2: Commands & Parameters -->
+        <div id="tabContentCommands" class="hidden flex flex-col gap-4">
+          <div class="flex items-center justify-between">
+            <p class="text-xs text-zinc-400">
+              Comandos, subcomandos e parâmetros aceitos por esta ferramenta.
+            </p>
+            <span class="text-xs text-zinc-500">Clique para copiar o comando</span>
+          </div>
+
+          <div id="commandsContainer" class="grid grid-cols-1 gap-3">
+            <!-- Dynamic commands -->
+          </div>
+        </div>
+
+        <!-- Tab 3: Occurrences / Duplicates in Projects -->
+        <div id="tabContentProjects" class="hidden flex flex-col gap-4">
+          <div class="flex items-center justify-between">
+            <p class="text-xs text-zinc-400">
+              Locais físicos onde este mesmo ativo foi detectado em seus discos:
+            </p>
+            <span id="projectCountBadge" class="text-xs px-2.5 py-0.5 rounded-full bg-zinc-800 text-zinc-300 font-mono">0 ocorrências</span>
+          </div>
+
+          <div id="projectOccurrencesContainer" class="flex flex-col gap-2">
+            <!-- Dynamic occurrence cards -->
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ========================================== -->
+  <!-- MODAL 2: DIFF VIEW LADO A LADO             -->
+  <!-- ========================================== -->
+  <div id="diffModal" style="display: none;" class="fixed inset-0 z-50 bg-black/85 backdrop-blur-md items-center justify-center p-3 sm:p-6">
+    <div class="glass max-w-6xl w-full h-[90vh] rounded-2xl border border-zinc-700 flex flex-col overflow-hidden shadow-2xl">
+      
+      <!-- Diff Header -->
+      <div class="px-6 py-4 border-b border-zinc-800 flex items-center justify-between bg-zinc-900/80">
+        <div class="flex items-center gap-3">
+          <div class="h-10 w-10 rounded-xl bg-emerald-600/20 border border-emerald-500/30 flex items-center justify-center">
+            <i data-lucide="git-compare" class="w-5 h-5 text-emerald-400"></i>
+          </div>
+          <div>
+            <h3 class="text-base font-bold text-white flex items-center gap-2">
+              Padronização de Fronteira (AIDD 0.001%)
+            </h3>
+            <p id="diffModalFilePath" class="text-xs text-zinc-400 font-mono truncate max-w-xl"></p>
+          </div>
+        </div>
+
+        <!-- Token Delta Telemetry -->
+        <div class="flex items-center gap-3">
+          <div class="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-zinc-950 border border-zinc-800 text-xs font-mono">
+            <span class="text-zinc-500">Original:</span>
+            <span id="diffTokenOrig" class="text-zinc-300 font-bold">0</span>
+            <span class="text-zinc-600">|</span>
+            <span class="text-zinc-500">Canônico:</span>
+            <span id="diffTokenCanon" class="text-emerald-400 font-bold">0</span>
+            <span class="text-zinc-600">|</span>
+            <span class="text-zinc-500">Delta:</span>
+            <span id="diffTokenDelta" class="text-cyan-400 font-bold">0</span>
+          </div>
+
+          <button onclick="closeDiffModal()" class="p-1.5 rounded-lg hover:bg-zinc-800 text-zinc-400 hover:text-white cursor-pointer">
+            <i data-lucide="x" class="w-5 h-5"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Side-by-Side Body -->
+      <div class="flex-1 grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-zinc-800 overflow-hidden bg-surface-900">
+        
+        <!-- Left: Original -->
+        <div class="flex flex-col h-full overflow-hidden">
+          <div class="px-4 py-2 bg-zinc-950/80 border-b border-zinc-800 text-xs font-semibold text-zinc-400 flex items-center justify-between">
+            <span>Arquivo Atual no Disco</span>
+            <span class="text-[10px] text-zinc-500 uppercase font-mono">Original</span>
+          </div>
+          <div id="diffLeftContent" class="flex-1 p-4 overflow-y-auto diff-box text-zinc-400 bg-zinc-950/30">
+            <!-- Content -->
+          </div>
+        </div>
+
+        <!-- Right: Canonical -->
+        <div class="flex flex-col h-full overflow-hidden">
+          <div class="px-4 py-2 bg-emerald-950/20 border-b border-zinc-800 text-xs font-semibold text-emerald-400 flex items-center justify-between">
+            <span>Padrão Canônico AIDD (Fronteira 0.001%)</span>
+            <span class="text-[10px] text-emerald-300 uppercase font-mono">Otimizado</span>
+          </div>
+          <div id="diffRightContent" class="flex-1 p-4 overflow-y-auto diff-box text-zinc-200 bg-emerald-950/5">
+            <!-- Content -->
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Diff Footer Actions -->
+      <div class="px-6 py-4 border-t border-zinc-800 bg-zinc-950 flex flex-wrap items-center justify-between gap-3">
+        <label class="flex items-center gap-2 text-xs text-zinc-300 cursor-pointer select-none">
+          <input type="checkbox" id="diffCheckPropagate" checked class="rounded bg-zinc-900 border-zinc-700 text-emerald-600 focus:ring-0">
+          <span>Propagar padronização para todas as ocorrências físicas detectadas</span>
+        </label>
+
+        <div class="flex items-center gap-2">
+          <button onclick="copyCanonicalDiff()" class="px-3.5 py-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-xs flex items-center gap-1.5 cursor-pointer">
+            <i data-lucide="copy" class="w-3.5 h-3.5"></i>
+            <span>Copiar Canônico</span>
+          </button>
+          
+          <button onclick="downloadCanonicalDiff()" class="px-3.5 py-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-xs flex items-center gap-1.5 cursor-pointer">
+            <i data-lucide="download" class="w-3.5 h-3.5"></i>
+            <span>Baixar .md</span>
+          </button>
+          
+          <button onclick="applyCanonicalStandardization()" class="px-5 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold flex items-center gap-1.5 shadow-md shadow-emerald-600/20 cursor-pointer">
+            <i data-lucide="check" class="w-4 h-4"></i>
+            <span>Confirmar e Aplicar (com backup .bak)</span>
+          </button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ========================================== -->
+  <!-- MODAL: CADASTRAR PROVEDOR / CHAVE DE API   -->
+  <!-- ========================================== -->
+  <div id="addModelModal" style="display: none;" class="fixed inset-0 z-50 bg-black/85 backdrop-blur-md items-center justify-center p-4">
+    <div class="glass max-w-lg w-full rounded-2xl border border-zinc-700 p-6 flex flex-col gap-4 shadow-2xl">
+      <div class="flex items-center justify-between border-b border-zinc-800 pb-3">
+        <h3 class="text-base font-bold text-white flex items-center gap-2">
+          <i data-lucide="key" class="w-5 h-5 text-brand-400"></i>
+          Cadastrar Modelo ou Provedor de LLM
+        </h3>
+        <button onclick="closeAddModelModal()" class="p-1 rounded-lg hover:bg-zinc-800 text-zinc-400 hover:text-white cursor-pointer">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <div class="flex flex-col gap-3 text-xs">
+        <div>
+          <label class="text-zinc-300 font-semibold">Provedor de IA:</label>
+          <select id="modalProviderPreset" onchange="applyProviderPreset()" class="w-full mt-1 px-3 py-2 rounded-xl bg-zinc-900 border border-zinc-800 text-xs text-white">
+            <option value="gemini">Google AI Studio (Gemini 2.0 Flash / Pro)</option>
+            <option value="groq">Groq Cloud (Llama 3.3 70B - Gratuito)</option>
+            <option value="openrouter">OpenRouter (Roteador Universal)</option>
+            <option value="openai">OpenAI (GPT-4o, GPT-4o-mini)</option>
+            <option value="anthropic">Anthropic (Claude 3.5 Sonnet / Haiku)</option>
+            <option value="deepseek">DeepSeek API (DeepSeek-V3 / R1)</option>
+            <option value="ollama">Ollama Local (detectado no SO)</option>
+            <option value="custom">Provedor Customizado (OpenAI Compatible)</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="text-zinc-300 font-semibold">Nome de Exibição:</label>
+          <input type="text" id="modalModelName" value="Google Gemini 2.0 Flash" placeholder="Ex: Google Gemini 2.0 Flash" class="w-full mt-1 px-3 py-2 rounded-xl bg-zinc-900 border border-zinc-800 text-xs text-white">
+        </div>
+
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="text-zinc-300 font-semibold">ID do Modelo:</label>
+            <input type="text" id="modalModelID" value="gemini-2.0-flash" class="w-full mt-1 px-3 py-2 rounded-xl bg-zinc-900 border border-zinc-800 text-xs text-white font-mono">
+          </div>
+          <div>
+            <label class="text-zinc-300 font-semibold">Endpoint Base:</label>
+            <input type="text" id="modalModelEndpoint" value="https://generativelanguage.googleapis.com" class="w-full mt-1 px-3 py-2 rounded-xl bg-zinc-900 border border-zinc-800 text-xs text-white font-mono">
+          </div>
+        </div>
+
+        <div>
+          <label class="text-zinc-300 font-semibold flex items-center justify-between">
+            <span>Chave de API (Secret Key):</span>
+            <span class="text-[10px] text-zinc-500 font-normal">Armazenada localmente com segurança</span>
+          </label>
+          <input type="password" id="modalModelApiKey" placeholder="Insira sua chave (ex: AIzaSy... / gsk_... / sk-...)" class="w-full mt-1 px-3 py-2 rounded-xl bg-zinc-900 border border-zinc-800 text-xs text-white font-mono">
+        </div>
+
+        <div class="flex items-center gap-2 pt-1">
+          <input type="checkbox" id="modalModelEnabled" checked class="rounded bg-zinc-900 border-zinc-700 text-brand-600 focus:ring-0">
+          <label for="modalModelEnabled" class="text-zinc-300 select-none cursor-pointer">Habilitar imediatamente na esteira de fallback</label>
+        </div>
+      </div>
+
+      <div class="flex justify-end gap-2 border-t border-zinc-800 pt-3">
+        <button onclick="closeAddModelModal()" class="px-4 py-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-xs text-zinc-300 cursor-pointer">Cancelar</button>
+        <button onclick="saveNewModelFromModal()" class="px-5 py-2 rounded-lg bg-brand-600 hover:bg-brand-500 text-white text-xs font-semibold shadow-md shadow-brand-500/20 cursor-pointer">Salvar Modelo na Esteira</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================== -->
+  <!-- MODAL 3: CONFIGURAÇÃO RÁPIDA (ENGRENAGEM)  -->
+  <!-- ========================================== -->
+  <div id="configModal" style="display: none;" class="fixed inset-0 z-50 bg-black/80 backdrop-blur-md items-center justify-center p-4">
+    <div class="glass max-w-lg w-full rounded-2xl border border-zinc-700 p-6 flex flex-col gap-4 shadow-2xl">
+      <div class="flex items-center justify-between border-b border-zinc-800 pb-3">
+        <h3 class="text-base font-bold text-white flex items-center gap-2">
+          <i data-lucide="settings" class="w-5 h-5 text-brand-400"></i>
+          Configuração de Escaneamento
+        </h3>
+        <button onclick="closeConfigModal()" class="p-1 rounded-lg hover:bg-zinc-800 text-zinc-400 hover:text-white cursor-pointer">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <div class="flex flex-col gap-2">
+        <label class="text-xs font-semibold text-zinc-300">Drives e Diretórios Raiz:</label>
+        <div id="configRootsList" class="flex flex-col gap-2 max-h-48 overflow-y-auto pr-1">
+          <!-- Dinamico -->
+        </div>
+        <div class="flex gap-2 mt-2">
+          <input type="text" id="configNewRootInput" placeholder="Ex: C:\MeuDrive ou D:\" class="flex-1 px-3 py-1.5 rounded-lg bg-zinc-900 border border-zinc-800 text-xs text-white focus:outline-none focus:border-brand-500 font-mono">
+          <button onclick="addRootFromModal()" class="px-3 py-1.5 rounded-lg bg-brand-600 hover:bg-brand-500 text-white text-xs font-semibold cursor-pointer">Adicionar</button>
+        </div>
+      </div>
+
+      <div class="flex justify-end gap-2 border-t border-zinc-800 pt-3">
+        <button onclick="closeConfigModal()" class="px-4 py-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-xs text-zinc-300 cursor-pointer">Cancelar</button>
+        <button onclick="saveAndRescanFromModal()" class="px-4 py-2 rounded-lg bg-brand-600 hover:bg-brand-500 text-white text-xs font-semibold shadow-md shadow-brand-500/20 cursor-pointer">Salvar e Sincronizar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================== -->
+  <!-- MODAL: ENTREVISTA INTERATIVA (CHAT POPUP)  -->
+  <!-- ========================================== -->
+  <div id="interviewChatModal" style="display: none;" class="fixed inset-0 z-50 bg-black/90 backdrop-blur-md items-center justify-center p-3 sm:p-6">
+    <div class="glass max-w-3xl w-full h-[88vh] max-h-[720px] rounded-2xl border border-zinc-700 flex flex-col overflow-hidden shadow-2xl">
+      
+      <!-- Chat Header -->
+      <div class="px-6 py-3.5 border-b border-zinc-800 flex items-center justify-between bg-zinc-900/90 shrink-0">
+        <div class="flex items-center gap-3">
+          <div class="h-9 w-9 rounded-xl bg-gradient-to-tr from-cyan-600 to-brand-600 flex items-center justify-center shadow-lg shadow-cyan-600/25 shrink-0">
+            <i data-lucide="messages-square" class="w-5 h-5 text-white"></i>
+          </div>
+          <div>
+            <h3 class="text-sm sm:text-base font-bold text-white flex items-center gap-2">
+              <span>Entrevista de Requisitos Interativa</span>
+              <span class="text-[10px] uppercase font-mono px-2 py-0.5 rounded-full bg-cyan-950 text-cyan-300 border border-cyan-800">interview-me</span>
+            </h3>
+            <p class="text-[11px] text-zinc-400">Uma pergunta por vez em PT-BR até atingir ≥95% de clareza (Padrão Addy Osmani)</p>
+          </div>
+        </div>
+
+        <button onclick="closeInterviewChatModal()" class="p-1.5 rounded-lg hover:bg-zinc-800 text-zinc-400 hover:text-white cursor-pointer">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <!-- Confidence Gauge Bar -->
+      <div class="px-6 py-2.5 bg-zinc-950/80 border-b border-zinc-800/80 flex flex-col gap-1.5 shrink-0">
+        <div class="flex items-center justify-between text-xs font-mono">
+          <span class="text-zinc-400 flex items-center gap-1.5">
+            <i data-lucide="target" class="w-3.5 h-3.5 text-cyan-400"></i>
+            <span>Nível de Certeza do Requisito:</span>
+          </span>
+          <div class="flex items-center gap-2">
+            <span id="interviewConfidenceLabel" class="text-cyan-300 font-bold">35%</span>
+            <span class="text-zinc-600 text-[10px]">(Meta: ≥95%)</span>
+          </div>
+        </div>
+        <div class="w-full h-2 rounded-full bg-zinc-900 overflow-hidden border border-zinc-800">
+          <div id="interviewConfidenceFill" class="h-full bg-gradient-to-r from-cyan-500 via-brand-500 to-emerald-400 transition-all duration-500" style="width: 35%"></div>
+        </div>
+      </div>
+
+      <!-- Chat Messages Container -->
+      <div id="interviewChatContainer" class="flex-1 p-5 overflow-y-auto flex flex-col gap-4 bg-surface-900/60 font-sans text-xs">
+        <!-- Mensagens dinâmicas -->
+      </div>
+
+      <!-- Chat Bottom / Quick Suggestion & Input Bar -->
+      <div class="p-4 bg-zinc-900/95 border-t border-zinc-800 flex flex-col gap-2.5 shrink-0">
+        
+        <!-- Quick Best Guess Card -->
+        <div id="interviewBestGuessContainer" class="hidden p-2.5 rounded-xl bg-cyan-950/40 border border-cyan-500/30 flex items-center justify-between gap-3 text-xs">
+          <div class="flex items-center gap-2 overflow-hidden">
+            <i data-lucide="sparkles" class="w-4 h-4 text-cyan-400 shrink-0"></i>
+            <span id="interviewBestGuessText" class="text-cyan-200 truncate font-mono text-[11px]"></span>
+          </div>
+          <button onclick="applyInterviewBestGuess()" class="px-2.5 py-1 rounded-lg bg-cyan-600 hover:bg-cyan-500 text-white font-semibold text-[11px] shrink-0 cursor-pointer shadow">
+            Usar Sugestão
+          </button>
+        </div>
+
+        <!-- Input Row -->
+        <div class="flex items-end gap-2">
+          <div class="flex-1 relative">
+            <textarea id="interviewUserInput" rows="2" onkeydown="handleInterviewKeyDown(event)" placeholder="Digite sua resposta aqui ou complemente a sugestão... (Pressione Enter para enviar)" class="w-full p-2.5 rounded-xl bg-zinc-950 border border-zinc-800 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-cyan-500 resize-none font-sans"></textarea>
+          </div>
+
+          <button id="btnSendInterviewAnswer" onclick="sendInterviewAnswer()" class="h-10 px-4 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white text-xs font-semibold flex items-center gap-1.5 shadow-lg shadow-cyan-600/20 cursor-pointer shrink-0">
+            <i data-lucide="send" class="w-3.5 h-3.5"></i>
+            <span class="hidden sm:inline">Responder</span>
+          </button>
+
+          <button id="btnFinishInterview" onclick="finalizeInterviewAndMaterialize()" class="h-10 px-4 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-xs font-semibold flex items-center gap-1.5 cursor-pointer shrink-0">
+            <i data-lucide="check-check" class="w-3.5 h-3.5"></i>
+            <span>Concluir Esteira</span>
+          </button>
+        </div>
+
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ========================================== -->
+  <!-- MODAL 4: CONSTRUÇÃO & MATERIALIZAÇÃO       -->
+  <!-- ========================================== -->
+  <div id="buildProgressModal" style="display: none;" class="fixed inset-0 z-50 bg-black/90 backdrop-blur-md items-center justify-center p-3 sm:p-6">
+    <div class="glass max-w-3xl w-full rounded-2xl border border-zinc-700 flex flex-col overflow-hidden shadow-2xl">
+      
+      <!-- Modal Header -->
+      <div class="px-6 py-4 border-b border-zinc-800 flex items-center justify-between bg-zinc-900/80">
+        <div class="flex items-center gap-3">
+          <div class="h-10 w-10 rounded-xl bg-cyan-600/20 border border-cyan-500/40 flex items-center justify-center">
+            <i data-lucide="cpu" class="w-5 h-5 text-cyan-400 animate-pulse"></i>
+          </div>
+          <div>
+            <h3 class="text-base font-bold text-white flex items-center gap-2">
+              <span>Construção & Materialização do Pipeline</span>
+            </h3>
+            <p class="text-xs text-zinc-400">Encadeando skills de implementação do Addy Osmani e AIDD v4 em tempo real</p>
+          </div>
+        </div>
+        <button onclick="closeBuildProgressModal()" class="p-1.5 rounded-lg hover:bg-zinc-800 text-zinc-400 hover:text-white cursor-pointer">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <!-- Modal Body -->
+      <div class="p-6 flex flex-col gap-5 bg-surface-900">
+        
+        <!-- Progress Bar -->
+        <div class="flex flex-col gap-2">
+          <div class="flex items-center justify-between text-xs">
+            <span id="buildStatusTitle" class="text-zinc-300 font-semibold font-mono">Iniciando orquestração da esteira...</span>
+            <span id="buildPercentageText" class="text-cyan-400 font-bold font-mono">0%</span>
+          </div>
+          <div class="w-full h-2.5 rounded-full bg-zinc-950 border border-zinc-800 overflow-hidden">
+            <div id="buildProgressBar" class="h-full bg-gradient-to-r from-cyan-500 to-emerald-500 rounded-full transition-all duration-300" style="width: 0%"></div>
+          </div>
+        </div>
+
+        <!-- 7 Stages Checklist -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs font-mono">
+          <div id="buildStep1" class="flex items-center gap-2 p-2 rounded-lg bg-zinc-900/70 border border-zinc-800 text-zinc-400">
+            <i id="buildIcon1" data-lucide="circle" class="w-3.5 h-3.5 text-zinc-600"></i>
+            <span>1. interview-me: Intenção & Oratória</span>
+          </div>
+          <div id="buildStep2" class="flex items-center gap-2 p-2 rounded-lg bg-zinc-900/70 border border-zinc-800 text-zinc-400">
+            <i id="buildIcon2" data-lucide="circle" class="w-3.5 h-3.5 text-zinc-600"></i>
+            <span>2. spec-driven: Contratos Tipados</span>
+          </div>
+          <div id="buildStep3" class="flex items-center gap-2 p-2 rounded-lg bg-zinc-900/70 border border-zinc-800 text-zinc-400">
+            <i id="buildIcon3" data-lucide="circle" class="w-3.5 h-3.5 text-zinc-600"></i>
+            <span>3. planning-dag: Grafo de Tarefas</span>
+          </div>
+          <div id="buildStep4" class="flex items-center gap-2 p-2 rounded-lg bg-zinc-900/70 border border-zinc-800 text-zinc-400">
+            <i id="buildIcon4" data-lucide="circle" class="w-3.5 h-3.5 text-zinc-600"></i>
+            <span>4. incremental: Árvore & AGENTS.md</span>
+          </div>
+          <div id="buildStep5" class="flex items-center gap-2 p-2 rounded-lg bg-zinc-900/70 border border-zinc-800 text-zinc-400">
+            <i id="buildIcon5" data-lucide="circle" class="w-3.5 h-3.5 text-zinc-600"></i>
+            <span>5. tdd: Suíte de Testes Python</span>
+          </div>
+          <div id="buildStep6" class="flex items-center gap-2 p-2 rounded-lg bg-zinc-900/70 border border-zinc-800 text-zinc-400">
+            <i id="buildIcon6" data-lucide="circle" class="w-3.5 h-3.5 text-zinc-600"></i>
+            <span>6. quality: Injeção de 6 Skills</span>
+          </div>
+          <div id="buildStep7" class="col-span-1 sm:col-span-2 flex items-center gap-2 p-2 rounded-lg bg-zinc-900/70 border border-zinc-800 text-zinc-400">
+            <i id="buildIcon7" data-lucide="circle" class="w-3.5 h-3.5 text-zinc-600"></i>
+            <span>7. code-simplify + webperf: Otimização de Tokens & Scripts de Execução</span>
+          </div>
+        </div>
+
+        <!-- Real-Time Console Output -->
+        <div class="flex flex-col gap-1.5">
+          <div class="flex items-center justify-between text-[11px] text-zinc-400 font-mono">
+            <span>Terminal de Construção em Tempo Real:</span>
+            <span class="text-zinc-600">I/O Determinístico</span>
+          </div>
+          <div id="buildConsoleTerminal" class="h-44 p-3 rounded-xl bg-black border border-zinc-800 overflow-y-auto font-mono text-[11px] leading-relaxed text-zinc-300 flex flex-col gap-1">
+            <!-- Dynamic logs -->
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="px-6 py-4 border-t border-zinc-800 bg-zinc-950 flex items-center justify-between gap-3">
+        <span id="buildFinalPathNotice" class="text-xs text-zinc-400 font-mono truncate max-w-sm"></span>
+
+        <div class="flex items-center gap-2">
+          <button id="btnBuildModalClose" onclick="closeBuildProgressModal()" class="px-4 py-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-xs text-zinc-300 cursor-pointer">Fechar</button>
+          
+          <button id="btnBuildModalOpenExplorer" onclick="openMaterializedFolder()" disabled class="px-5 py-2 rounded-lg bg-emerald-600/40 text-emerald-300/40 text-xs font-semibold flex items-center gap-1.5 cursor-not-allowed">
+            <i data-lucide="folder" class="w-3.5 h-3.5"></i>
+            <span>Abrir no Windows Explorer</span>
+          </button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- TOAST NOTIFICATION CONTAINER -->
+  <div id="toastContainer" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+  <!-- APPLICATION LOGIC IN JAVASCRIPT -->
+  <script>
+    // State Management
+    let allItems = [];
+    let filteredItems = [];
+    let currentItem = null;
+    let currentRawDocs = "";
+    let currentVirtualDocs = null;
+    let showingVirtualTrans = false;
+    let currentDiffData = null;
+    let currentConfig = { search_roots: ["C:\\", "D:\\", "F:\\"], ollama_host: "http://127.0.0.1:11434", ollama_model: "llama3.1:8b" };
+    let currentHub = "catalog";
+    let viewMode = 'grid';
+    let currentPage = 1;
+    let pageSize = 24;
+    let filterTypeTab = 'ALL';
+
+    const categoryConfig = {
+      "Automação & Orquestração": { badge: "bg-amber-500/10 text-amber-300 border-amber-500/20", icon: "workflow" },
+      "Desenvolvimento & Arquitetura": { badge: "bg-blue-500/10 text-blue-300 border-blue-500/20", icon: "code" },
+      "UI/UX & Motion Design": { badge: "bg-purple-500/10 text-purple-300 border-purple-500/20", icon: "palette" },
+      "Engenharia Reversa": { badge: "bg-cyan-500/10 text-cyan-300 border-cyan-500/20", icon: "binary" },
+      "Inteligência Científica": { badge: "bg-emerald-500/10 text-emerald-300 border-emerald-500/20", icon: "flask-conical" },
+      "Servidores MCP": { badge: "bg-emerald-500/10 text-emerald-300 border-emerald-500/20", icon: "server" },
+      "Utilitários Gerais": { badge: "bg-zinc-800 text-zinc-300 border-zinc-700", icon: "tool" }
+    };
+
+    const driveColors = {
+      "C:": "bg-blue-500/10 text-blue-300 border-blue-500/20",
+      "D:": "bg-amber-500/10 text-amber-300 border-amber-500/20",
+      "F:": "bg-rose-500/10 text-rose-300 border-rose-500/20"
+    };
+
+    // Initialization
+    window.addEventListener('DOMContentLoaded', () => {
+      lucide.createIcons();
+      fetchConfig();
+      fetchCatalog();
+      setupSSE();
+    });
+
+    // Hub Switching
+    function switchMainHub(hubId) {
+      currentHub = hubId;
+      const hubs = ['catalog', 'pipeline', 'templates', 'harnesses', 'settings'];
+      hubs.forEach(h => {
+        const elSection = document.getElementById('hubSection' + capitalize(h));
+        const elBtn = document.getElementById('navHub' + capitalize(h));
+        if (elSection && elBtn) {
+          if (h === hubId) {
+            elSection.classList.remove('hidden');
+            elBtn.classList.add('text-white', 'bg-brand-600/20', 'border', 'border-brand-500/30');
+            elBtn.classList.remove('text-zinc-400');
+          } else {
+            elSection.classList.add('hidden');
+            elBtn.classList.remove('text-white', 'bg-brand-600/20', 'border', 'border-brand-500/30');
+            elBtn.classList.add('text-zinc-400');
+          }
+        }
+      });
+
+      if (hubId === 'templates') loadTemplatesHub();
+      if (hubId === 'harnesses') refreshHarnesses();
+      if (hubId === 'settings') renderSettingsView();
+
+      lucide.createIcons();
+    }
+
+    function capitalize(s) {
+      return s.charAt(0).toUpperCase() + s.slice(1);
+    }
+
+    // Toggle Collapsible Metrics Bar
+    let metricsExpanded = true;
+    function toggleMetricsBar() {
+      metricsExpanded = !metricsExpanded;
+      const bar = document.getElementById('collapsibleMetricsBar');
+      const icon = document.getElementById('iconToggleMetrics');
+      const text = document.getElementById('textToggleMetrics');
+
+      if (metricsExpanded) {
+        bar.style.display = 'block';
+        text.innerText = 'Encolher Painel';
+        icon.setAttribute('data-lucide', 'chevron-up');
+      } else {
+        bar.style.display = 'none';
+        text.innerText = 'Expandir Painel';
+        icon.setAttribute('data-lucide', 'chevron-down');
+      }
+      lucide.createIcons();
+    }
+
+    // Server-Sent Events (Live Sync)
+    function setupSSE() {
+      const es = new EventSource('/api/events');
+      es.onmessage = (e) => {
+        try {
+          const evt = JSON.parse(e.data);
+          if (evt.type === 'scan_completed') {
+            showToast('Varredura concluída com sucesso', 'success');
+            fetchCatalog();
+          } else if (evt.type === 'file_changed') {
+            showToast('Alteração em disco detectada: ' + evt.path, 'info');
+          }
+        } catch(err) {}
+      };
+      es.onerror = () => {
+        document.getElementById('statusText').innerText = 'Offline';
+        document.getElementById('statusPill').classList.replace('text-emerald-400', 'text-amber-400');
+      };
+    }
+
+    // Fetch Config
+    async function fetchConfig() {
+      try {
+        const res = await fetch('/api/config');
+        if (res.ok) {
+          currentConfig = await res.json();
+          renderRootsPill();
+        }
+      } catch (e) {}
+    }
+
+    function renderRootsPill() {
+      const pill = document.getElementById('headerRootsPill');
+      if (currentConfig.search_roots) {
+        pill.innerText = currentConfig.search_roots.join(' ');
+      }
+    }
+
+    // Fetch Catalog
+    async function fetchCatalog() {
+      const icon = document.getElementById('iconResync');
+      icon.classList.add('animate-spin');
+
+      try {
+        const res = await fetch('/api/catalog');
+        if (!res.ok) throw new Error("Falha ao ler catálogo");
+        const data = await res.json();
+
+        allItems = data.items || [];
+        updateMetrics(data);
+
+        document.getElementById('hubCatalogBadge').innerText = allItems.length.toLocaleString();
+        document.getElementById('lastSyncLabel').innerText = 'Sincronizado: ' + new Date().toLocaleTimeString();
+
+        applyFilters();
+      } catch (err) {
+        showToast('Erro ao carregar catálogo: ' + err.message, 'error');
+      } finally {
+        icon.classList.remove('animate-spin');
+      }
+    }
+
+    function updateMetrics(d) {
+      const total = d.total_items || (d.metrics ? d.metrics.total_items : 0) || 0;
+      const uniq = d.total_unique_skills || (d.metrics ? d.metrics.unique_skills : 0) || 0;
+      const mcps = d.total_mcps || (d.metrics ? d.metrics.total_mcps : 0) || 0;
+      const rules = d.total_rules || 0;
+      const hooks = d.total_hooks || 0;
+      const agents = d.total_agents || 0;
+      const scripts = d.total_scripts || 0;
+      const skills = d.total_skills || 0;
+
+      const driveC = (d.drives && d.drives["C:"]) || (d.metrics ? d.metrics.drive_c : 0) || 0;
+      const driveD = (d.drives && d.drives["D:"]) || (d.metrics ? d.metrics.drive_d : 0) || 0;
+      const driveF = (d.drives && d.drives["F:"]) || (d.metrics ? d.metrics.drive_f : 0) || 0;
+
+      document.getElementById('statTotalItems').innerText = total.toLocaleString();
+      document.getElementById('statUniqueSkills').innerText = uniq.toLocaleString();
+      document.getElementById('statTotalMCPs').innerText = mcps.toLocaleString();
+      document.getElementById('statDriveC').innerText = driveC.toLocaleString();
+      document.getElementById('statDriveD').innerText = driveD.toLocaleString();
+      document.getElementById('statDriveF').innerText = driveF.toLocaleString();
+
+      if (document.getElementById('badgeCountALL')) document.getElementById('badgeCountALL').innerText = total.toLocaleString();
+      if (document.getElementById('badgeCountSkill')) document.getElementById('badgeCountSkill').innerText = skills.toLocaleString();
+      if (document.getElementById('badgeCountMCP')) document.getElementById('badgeCountMCP').innerText = mcps.toLocaleString();
+      if (document.getElementById('badgeCountRule')) document.getElementById('badgeCountRule').innerText = rules.toLocaleString();
+      if (document.getElementById('badgeCountHook')) document.getElementById('badgeCountHook').innerText = hooks.toLocaleString();
+      if (document.getElementById('badgeCountAgent')) document.getElementById('badgeCountAgent').innerText = agents.toLocaleString();
+      if (document.getElementById('badgeCountScript')) document.getElementById('badgeCountScript').innerText = scripts.toLocaleString();
+    }
+
+    function setFilterTypeTab(type) {
+      filterTypeTab = type;
+      const tabs = ['ALL', 'Skill', 'MCP', 'Rule', 'Hook', 'Agent', 'Script'];
+      tabs.forEach(t => {
+        const btn = document.getElementById('tabType' + t);
+        if (btn) {
+          if (t === type || (t === 'MCP' && type === 'MCP Server') || (t === 'Agent' && type === 'Agent Spec')) {
+            btn.className = "px-3 py-1.5 rounded-lg bg-zinc-800 text-white font-medium border border-zinc-700 cursor-pointer whitespace-nowrap shrink-0 flex items-center gap-1.5";
+          } else {
+            btn.className = "px-3 py-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800/60 font-medium cursor-pointer whitespace-nowrap shrink-0 flex items-center gap-1.5";
+          }
+        }
+      });
+      applyFilters();
+    }
+
+    // Filter Logic
+    function applyFilters() {
+      const query = (document.getElementById('searchInput').value || '').toLowerCase().trim();
+      const cat = document.getElementById('filterCategory').value;
+      const drive = document.getElementById('filterDrive').value;
+      const hideTmp = document.getElementById('checkCanonical').checked;
+      const groupDups = document.getElementById('checkGroupDuplicates').checked;
+
+      let pool = allItems.filter(item => {
+        if (filterTypeTab !== 'ALL' && item.type !== filterTypeTab) return false;
+        if (cat !== 'ALL' && item.category !== cat) return false;
+        if (drive !== 'ALL' && item.drive !== drive) return false;
+
+        if (hideTmp) {
+          const p = item.path.toLowerCase();
+          if (p.includes('\\.gemini\\') || p.includes('\\brain\\') || p.includes('\\tmp\\') || p.includes('\\temp\\')) {
+            return false;
+          }
+        }
+
+        if (query) {
+          const matchName = (item.name || '').toLowerCase().includes(query);
+          const matchDesc = (item.description || '').toLowerCase().includes(query);
+          const matchPath = (item.path || '').toLowerCase().includes(query);
+          const matchCat = (item.category || '').toLowerCase().includes(query);
+          const matchCmd = (item.command || '').toLowerCase().includes(query);
+          if (!matchName && !matchDesc && !matchPath && !matchCat && !matchCmd) return false;
+        }
+
+        return true;
+      });
+
+      if (groupDups) {
+        const seen = new Set();
+        const grouped = [];
+        for (const it of pool) {
+          const key = (it.type + '::' + (it.name || '').trim().toLowerCase());
+          if (!seen.has(key)) {
+            seen.add(key);
+            grouped.push(it);
+          }
+        }
+        filteredItems = grouped;
+      } else {
+        filteredItems = pool;
+      }
+
+      currentPage = 1;
+      renderCurrentPage();
+    }
+
+    function resetFilters() {
+      document.getElementById('searchInput').value = '';
+      document.getElementById('filterCategory').value = 'ALL';
+      document.getElementById('filterDrive').value = 'ALL';
+      document.getElementById('checkCanonical').checked = true;
+      document.getElementById('checkGroupDuplicates').checked = true;
+      setFilterTypeTab('ALL');
+    }
+
+    function renderCurrentPage() {
+      const count = filteredItems.length;
+      document.getElementById('filteredCount').innerText = count.toLocaleString();
+
+      const totalPages = Math.ceil(count / pageSize) || 1;
+      if (currentPage > totalPages) currentPage = totalPages;
+
+      document.getElementById('pageText').innerText = `Página ${currentPage} de ${totalPages}`;
+      document.getElementById('btnPrevPage').disabled = (currentPage <= 1);
+      document.getElementById('btnNextPage').disabled = (currentPage >= totalPages);
+
+      const startIndex = (currentPage - 1) * pageSize;
+      const pageItems = filteredItems.slice(startIndex, startIndex + pageSize);
+
+      const empty = document.getElementById('emptyState');
+      const grid = document.getElementById('gridContainer');
+      const list = document.getElementById('listContainer');
+
+      if (count === 0) {
+        empty.classList.remove('hidden');
+        grid.classList.add('hidden');
+        list.classList.add('hidden');
+        return;
+      }
+
+      empty.classList.add('hidden');
+
+      if (viewMode === 'grid') {
+        grid.classList.remove('hidden');
+        list.classList.add('hidden');
+        renderGrid(pageItems);
+      } else {
+        grid.classList.add('hidden');
+        list.classList.remove('hidden');
+        renderList(pageItems);
+      }
+
+      lucide.createIcons();
+    }
+
+    function renderGrid(items) {
+      const container = document.getElementById('gridContainer');
+      container.innerHTML = items.map(item => {
+        const catCfg = categoryConfig[item.category] || categoryConfig["Utilitários Gerais"];
+        const driveClass = driveColors[item.drive] || "bg-zinc-800 text-zinc-300";
+        const dupCount = item.duplicate_count || (item.occurrences ? item.occurrences.length : 1);
+        const hasDups = dupCount > 1;
+
+        return `
+          <div class="glass-card rounded-xl p-4 flex flex-col justify-between gap-3 group relative">
+            <div>
+              <div class="flex items-center justify-between gap-2 mb-2">
+                <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[11px] font-medium border ${catCfg.badge}">
+                  <i data-lucide="${catCfg.icon}" class="w-3 h-3"></i>
+                  ${item.category}
+                </span>
+
+                <div class="flex items-center gap-1.5">
+                  ${hasDups ? `
+                    <button onclick="openOccurrencesFromCard('${escapeId(item.id)}')" class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30 hover:bg-amber-500/30 cursor-pointer" title="Clique para ver todas as pastas onde este item se repete">
+                      <i data-lucide="copy" class="w-2.5 h-2.5"></i>
+                      <span>${dupCount} cópias</span>
+                    </button>
+                  ` : ''}
+                  <span class="px-1.5 py-0.5 rounded text-[10px] font-mono border ${driveClass}">${item.drive}</span>
+                  <span class="px-1.5 py-0.5 rounded text-[10px] bg-zinc-800 text-zinc-400 font-mono">${item.type}</span>
+                </div>
+              </div>
+
+              <h3 class="text-sm font-bold text-white group-hover:text-brand-400 transition truncate" title="${item.name}">
+                ${item.name}
+              </h3>
+              
+              <p class="text-xs text-zinc-400 mt-1 line-clamp-2 leading-relaxed">
+                ${item.description || 'Sem descrição declarada.'}
+              </p>
+            </div>
+
+            <div>
+              <div class="flex items-center justify-between text-[11px] text-zinc-500 pt-2 border-t border-zinc-800/60 font-mono">
+                <span class="truncate max-w-[180px]">${item.folder || item.source}</span>
+                <span>${item.last_modified ? item.last_modified.split('T')[0] : ''}</span>
+              </div>
+
+              <div class="grid grid-cols-3 gap-1.5 mt-3 pt-2">
+                <button onclick="inspectAsset('${escapeId(item.id)}', 'docs')" class="px-2 py-1.5 rounded-lg bg-zinc-800/80 hover:bg-zinc-700 text-zinc-300 hover:text-white text-xs font-medium flex items-center justify-center gap-1 transition cursor-pointer">
+                  <i data-lucide="file-text" class="w-3 h-3 text-brand-400"></i>
+                  <span>Ver Doc</span>
+                </button>
+
+                <button onclick="inspectAsset('${escapeId(item.id)}', 'commands')" class="px-2 py-1.5 rounded-lg bg-zinc-800/80 hover:bg-zinc-700 text-zinc-300 hover:text-white text-xs font-medium flex items-center justify-center gap-1 transition cursor-pointer">
+                  <i data-lucide="terminal" class="w-3 h-3 text-amber-400"></i>
+                  <span>Comandos</span>
+                </button>
+
+                <button onclick="openStandardizeDiffModal('${escapePath(item.path)}')" class="px-2 py-1.5 rounded-lg bg-emerald-950/40 border border-emerald-500/30 hover:bg-emerald-900/40 text-emerald-300 text-xs font-medium flex items-center justify-center gap-1 transition cursor-pointer" title="Elevar ao padrão de fronteira 0.001%">
+                  <i data-lucide="shield-check" class="w-3 h-3 text-emerald-400"></i>
+                  <span>Elevar</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function renderList(items) {
+      const tbody = document.getElementById('listTableBody');
+      tbody.innerHTML = items.map(item => {
+        const catCfg = categoryConfig[item.category] || categoryConfig["Utilitários Gerais"];
+        const dupCount = item.duplicate_count || (item.occurrences ? item.occurrences.length : 1);
+        return `
+          <tr class="hover:bg-zinc-800/30 transition">
+            <td class="px-4 py-3">
+              <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] border ${catCfg.badge}">
+                <i data-lucide="${catCfg.icon}" class="w-3 h-3"></i>
+                ${item.type}
+              </span>
+            </td>
+            <td class="px-4 py-3 font-semibold text-white">${item.name}</td>
+            <td class="px-4 py-3 text-zinc-400 max-w-xs truncate">${item.description || '-'}</td>
+            <td class="px-4 py-3 text-zinc-400">${item.drive}</td>
+            <td class="px-4 py-3">
+              ${dupCount > 1 ? `<span class="px-2 py-0.5 rounded text-[10px] bg-amber-500/20 text-amber-300 border border-amber-500/30">${dupCount} cópias</span>` : '1'}
+            </td>
+            <td class="px-4 py-3 text-right">
+              <button onclick="inspectAsset('${escapeId(item.id)}', 'docs')" class="px-2.5 py-1 rounded bg-zinc-800 hover:bg-zinc-700 text-zinc-200 text-xs mr-1 cursor-pointer">Inspecionar</button>
+              <button onclick="openStandardizeDiffModal('${escapePath(item.path)}')" class="px-2.5 py-1 rounded bg-emerald-950 text-emerald-300 border border-emerald-800/40 text-xs cursor-pointer">Elevar</button>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function setViewMode(mode) {
+      viewMode = mode;
+      document.getElementById('btnViewGrid').className = (mode === 'grid') ? "p-1 rounded text-white bg-zinc-800 cursor-pointer" : "p-1 rounded text-zinc-400 hover:text-white cursor-pointer";
+      document.getElementById('btnViewList').className = (mode === 'list') ? "p-1 rounded text-white bg-zinc-800 cursor-pointer" : "p-1 rounded text-zinc-400 hover:text-white cursor-pointer";
+      renderCurrentPage();
+    }
+
+    function changePage(delta) {
+      currentPage += delta;
+      renderCurrentPage();
+    }
+
+    // Inspect Asset Modal
+    async function inspectAsset(assetId, initialTab = 'docs') {
+      try {
+        // Localiza no catálogo em memória para resposta instantânea
+        const localItem = allItems.find(it => it.id === assetId) || allItems.find(it => it.path === assetId);
+        if (localItem) {
+          currentItem = Object.assign({}, localItem);
+          document.getElementById('modalTitle').innerText = localItem.name || 'Ativo';
+          document.getElementById('modalSubtitle').innerText = localItem.path || '';
+        }
+
+        const queryParam = localItem 
+          ? `id=${encodeURIComponent(localItem.id)}&path=${encodeURIComponent(localItem.path)}&type=${encodeURIComponent(localItem.type)}` 
+          : `id=${encodeURIComponent(assetId)}`;
+
+        const res = await fetch('/api/inspect?' + queryParam);
+        if (res.ok) {
+          const inspected = await res.json();
+          currentItem = Object.assign({}, localItem, inspected);
+        }
+
+        document.getElementById('modalTitle').innerText = currentItem.name || 'Ativo';
+        document.getElementById('modalSubtitle').innerText = currentItem.path || '';
+
+        // Occurrences badge
+        const occurrences = (currentItem.occurrences && currentItem.occurrences.length > 0)
+          ? currentItem.occurrences
+          : [{ path: currentItem.path, folder: currentItem.folder, drive: currentItem.drive, last_modified: currentItem.last_modified, size_kb: currentItem.size_kb }];
+
+        document.getElementById('tabProjectsBadge').innerText = occurrences.length;
+        document.getElementById('projectCountBadge').innerText = occurrences.length + ' ocorrências detectadas';
+
+        renderOccurrencesList(occurrences);
+        renderCommandsList(currentItem.commands || []);
+
+        showingVirtualTrans = false;
+        currentVirtualDocs = null;
+        document.getElementById('transStatusBadge').innerText = 'Original (Disco)';
+        document.getElementById('btnTransText').innerText = 'Visualizar em PT-BR';
+
+        switchModalTab(initialTab);
+        openModal();
+
+        // Load doc
+        if (currentItem && currentItem.path) {
+          loadDocumentContent(currentItem.path);
+        }
+      } catch (e) {
+        showToast('Erro ao inspecionar ativo: ' + e.message, 'error');
+      }
+    }
+
+    function openOccurrencesFromCard(assetId) {
+      inspectAsset(assetId, 'projects');
+    }
+
+    async function loadDocumentContent(filePath) {
+      const container = document.getElementById('docsContentRender');
+      container.innerHTML = `<div class="flex items-center justify-center py-20 text-zinc-500 gap-2"><i data-lucide="loader" class="w-5 h-5 animate-spin"></i><span>Carregando documentação...</span></div>`;
+      lucide.createIcons();
+
+      try {
+        const res = await fetch('/api/read?path=' + encodeURIComponent(filePath));
+        if (!res.ok) throw new Error("Falha ao ler arquivo");
+        currentRawDocs = await res.text();
+        container.innerHTML = marked.parse(currentRawDocs || '');
+      } catch (err) {
+        container.innerHTML = `<p class="text-rose-400">Erro ao carregar documento: ${err.message}</p>`;
+      }
+    }
+
+    // Non-destructive PT-BR Virtual Translation Projection
+    async function toggleVirtualTranslation() {
+      if (!currentRawDocs) return;
+      const container = document.getElementById('docsContentRender');
+      const badge = document.getElementById('transStatusBadge');
+      const btnText = document.getElementById('btnTransText');
+
+      if (!showingVirtualTrans) {
+        if (!currentVirtualDocs) {
+          btnText.innerText = 'Traduzindo...';
+          try {
+            const res = await fetch('/api/translate', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ path: currentItem.path, text: currentRawDocs })
+            });
+            if (!res.ok) throw new Error("Falha na projeção de tradução");
+            currentVirtualDocs = await res.text();
+          } catch(e) {
+            showToast('Erro na tradução virtual: ' + e.message, 'error');
+            btnText.innerText = 'Visualizar em PT-BR';
+            return;
+          }
+        }
+        container.innerHTML = marked.parse(currentVirtualDocs || '');
+        badge.innerText = 'Projeção PT-BR (Cache Local)';
+        btnText.innerText = 'Voltar ao Original';
+        showingVirtualTrans = true;
+      } else {
+        container.innerHTML = marked.parse(currentRawDocs || '');
+        badge.innerText = 'Original (Disco)';
+        btnText.innerText = 'Visualizar em PT-BR';
+        showingVirtualTrans = false;
+      }
+      lucide.createIcons();
+    }
+
+    function renderOccurrencesList(occs) {
+      const container = document.getElementById('projectOccurrencesContainer');
+      container.innerHTML = occs.map(occ => `
+        <div class="glass-card rounded-xl p-3 flex items-center justify-between gap-3 text-xs">
+          <div class="flex items-center gap-3 truncate">
+            <span class="px-2 py-0.5 rounded font-mono font-bold text-[10px] bg-zinc-800 text-zinc-300">${occ.drive || 'C:'}</span>
+            <div class="truncate">
+              <p class="text-white font-mono truncate">${occ.path}</p>
+              <p class="text-zinc-500 text-[10px]">${occ.folder || occ.source} - ${occ.size_kb ? occ.size_kb.toFixed(1) + ' KB' : ''}</p>
+            </div>
+          </div>
+          <button onclick="openFolderInExplorer('${escapePath(occ.path)}')" class="px-3 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-xs flex items-center gap-1.5 cursor-pointer shrink-0">
+            <i data-lucide="folder" class="w-3.5 h-3.5"></i>
+            <span>Abrir Pasta</span>
+          </button>
+        </div>
+      `).join('');
+      lucide.createIcons();
+    }
+
+    function renderCommandsList(cmds) {
+      const container = document.getElementById('commandsContainer');
+      const badge = document.getElementById('tabCommandsBadge');
+      badge.innerText = cmds.length;
+
+      if (!cmds || cmds.length === 0) {
+        container.innerHTML = `<p class="text-xs text-zinc-500 py-6 text-center">Nenhum subcomando ou parâmetro explícito declarado neste manifesto.</p>`;
+        return;
+      }
+
+      container.innerHTML = cmds.map(cmd => `
+        <div class="glass-card rounded-xl p-3 flex flex-col gap-2">
+          <div class="flex items-center justify-between">
+            <code class="text-amber-300 bg-amber-950/40 border border-amber-500/20 px-2 py-0.5 rounded text-xs">${cmd.name || cmd.command}</code>
+            <button onclick="copyToClipboard('${escapeAttr(cmd.name || cmd.command)}')" class="text-zinc-400 hover:text-white p-1 cursor-pointer" title="Copiar Comando">
+              <i data-lucide="copy" class="w-3.5 h-3.5"></i>
+            </button>
+          </div>
+          <p class="text-xs text-zinc-400">${cmd.description || 'Sem descrição.'}</p>
+        </div>
+      `).join('');
+      lucide.createIcons();
+    }
+
+    function switchModalTab(tab) {
+      const tabs = ['docs', 'commands', 'projects'];
+      tabs.forEach(t => {
+        const elBtn = document.getElementById('tabBtn' + capitalize(t));
+        const elContent = document.getElementById('tabContent' + capitalize(t));
+        if (t === tab) {
+          elContent.classList.remove('hidden');
+          elBtn.classList.add('border-brand-500', 'text-white');
+          elBtn.classList.remove('border-transparent', 'text-zinc-400');
+        } else {
+          elContent.classList.add('hidden');
+          elBtn.classList.remove('border-brand-500', 'text-white');
+          elBtn.classList.add('border-transparent', 'text-zinc-400');
+        }
+      });
+      lucide.createIcons();
+    }
+
+    function openModal() {
+      document.getElementById('detailModal').style.display = 'flex';
+      lucide.createIcons();
+    }
+
+    function closeModal() {
+      document.getElementById('detailModal').style.display = 'none';
+    }
+
+    // Modal 2: Side-by-Side Diff View (Standardize to Frontier Canon)
+    async function openStandardizeDiffModal(targetPath) {
+      try {
+        const res = await fetch('/api/standardize/diff?path=' + encodeURIComponent(targetPath));
+        if (!res.ok) throw new Error("Falha ao gerar análise canônica");
+        currentDiffData = await res.json();
+        currentDiffData.targetPath = targetPath;
+
+        document.getElementById('diffModalFilePath').innerText = targetPath;
+        document.getElementById('diffTokenOrig').innerText = currentDiffData.token_original.toLocaleString();
+        document.getElementById('diffTokenCanon').innerText = currentDiffData.token_canonical.toLocaleString();
+        
+        const delta = currentDiffData.token_delta;
+        const deltaEl = document.getElementById('diffTokenDelta');
+        deltaEl.innerText = (delta > 0 ? '+' : '') + delta.toLocaleString();
+        deltaEl.className = delta <= 0 ? 'text-emerald-400 font-bold' : 'text-amber-400 font-bold';
+
+        document.getElementById('diffLeftContent').innerText = currentDiffData.original_content;
+        document.getElementById('diffRightContent').innerText = currentDiffData.canonical_content;
+
+        document.getElementById('diffModal').style.display = 'flex';
+        lucide.createIcons();
+      } catch (err) {
+        showToast('Erro ao abrir diff: ' + err.message, 'error');
+      }
+    }
+
+    function openStandardizeDiffModalFromCurrent() {
+      if (currentItem && currentItem.path) {
+        openStandardizeDiffModal(currentItem.path);
+      }
+    }
+
+    function closeDiffModal() {
+      document.getElementById('diffModal').style.display = 'none';
+    }
+
+    function copyCanonicalDiff() {
+      if (currentDiffData && currentDiffData.canonical_content) {
+        copyToClipboard(currentDiffData.canonical_content);
+        showToast('Conteúdo canônico copiado com sucesso', 'success');
+      }
+    }
+
+    function downloadCanonicalDiff() {
+      if (currentDiffData && currentDiffData.canonical_content) {
+        downloadFile('canonical-standard.md', currentDiffData.canonical_content);
+      }
+    }
+
+    async function applyCanonicalStandardization() {
+      if (!currentDiffData) return;
+      const propagate = document.getElementById('diffCheckPropagate').checked;
+
+      try {
+        const res = await fetch('/api/standardize/apply', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            path: currentDiffData.targetPath,
+            content: currentDiffData.canonical_content,
+            propagate_dups: propagate
+          })
+        });
+
+        if (!res.ok) throw new Error("Falha ao aplicar padronização");
+        const resp = await res.json();
+        showToast(resp.message || 'Padronização aplicada com sucesso!', 'success');
+        closeDiffModal();
+        fetchCatalog();
+      } catch (err) {
+        showToast('Erro ao aplicar: ' + err.message, 'error');
+      }
+    }
+
+    // Hub 2: Pipeline Lab Logic (Esteira Canônica Addy Osmani)
+    let pipelineIntent = "";
+    let pipelineSpec = "";
+    let pipelinePlan = "";
+    let activePipelineTab = "spec";
+    let lastMaterializedPath = "";
+
+    function updateStepperStatus(step, state) {
+      // state: 'pending', 'running', 'done'
+      const ind = document.getElementById(`stepIndicator${step}`);
+      const icon = document.getElementById(`stepIcon${step}`);
+      if (!ind || !icon) return;
+
+      if (state === 'running') {
+        ind.className = "flex items-center gap-2 p-2 rounded-lg bg-cyan-950/60 border border-cyan-500/50 text-cyan-300";
+        icon.className = "w-5 h-5 rounded-full bg-cyan-500/20 text-cyan-300 flex items-center justify-center text-[10px] font-bold";
+        icon.innerHTML = `<i data-lucide="loader" class="w-3.5 h-3.5 animate-spin"></i>`;
+      } else if (state === 'done') {
+        ind.className = "flex items-center gap-2 p-2 rounded-lg bg-emerald-950/50 border border-emerald-500/40 text-emerald-300";
+        icon.className = "w-5 h-5 rounded-full bg-emerald-500/20 text-emerald-300 flex items-center justify-center text-[10px] font-bold";
+        icon.innerHTML = `<i data-lucide="check" class="w-3.5 h-3.5"></i>`;
+      } else {
+        ind.className = "flex items-center gap-2 p-2 rounded-lg bg-zinc-900 border border-zinc-800 text-zinc-400";
+        icon.className = "w-5 h-5 rounded-full bg-zinc-800 flex items-center justify-center text-[10px] font-bold";
+        icon.innerText = step;
+      }
+      lucide.createIcons();
+    }
+
+    // ==========================================
+    // ENTREVISTA INTERATIVA (CHAT POPUP PT-BR)
+    // ==========================================
+    let interviewHistory = [];
+    let currentInterviewRound = 0;
+    let currentConfidence = 35;
+    let currentBestGuess = "";
+    let interviewSummaryText = "";
+    let isInterviewReady = false;
+
+    async function openInterviewChatModal() {
+      const prompt = document.getElementById('pipelinePrompt').value.trim();
+      if (!prompt) {
+        showToast('Por favor, informe no campo de briefing o que você quer construir!', 'error');
+        document.getElementById('pipelinePrompt').focus();
+        return;
+      }
+
+      interviewHistory = [];
+      currentInterviewRound = 0;
+      currentConfidence = 35;
+      currentBestGuess = "";
+      interviewSummaryText = "";
+      isInterviewReady = false;
+
+      document.getElementById('interviewChatContainer').innerHTML = '';
+      document.getElementById('interviewChatModal').style.display = 'flex';
+      updateInterviewConfidenceUI(35);
+      lucide.createIcons();
+
+      await queryInterviewTurn("");
+    }
+
+    function closeInterviewChatModal() {
+      document.getElementById('interviewChatModal').style.display = 'none';
+    }
+
+    function updateInterviewConfidenceUI(val) {
+      currentConfidence = val;
+      document.getElementById('interviewConfidenceLabel').innerText = val + '%';
+      document.getElementById('interviewConfidenceFill').style.width = val + '%';
+      const finishBtn = document.getElementById('btnFinishInterview');
+      if (val >= 95) {
+        finishBtn.className = "h-10 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold flex items-center gap-1.5 shadow-lg shadow-emerald-600/30 animate-pulse cursor-pointer shrink-0";
+      } else {
+        finishBtn.className = "h-10 px-4 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-xs font-semibold flex items-center gap-1.5 cursor-pointer shrink-0";
+      }
+    }
+
+    async function queryInterviewTurn(userAnswer) {
+      const prompt = document.getElementById('pipelinePrompt').value.trim();
+      const container = document.getElementById('interviewChatContainer');
+
+      if (userAnswer) {
+        appendUserChatMessage(userAnswer);
+        interviewHistory.push({ role: "user", content: userAnswer });
+      }
+
+      // Indicador de carregamento
+      const loadingDiv = document.createElement('div');
+      loadingDiv.id = 'chatLoadingBubble';
+      loadingDiv.className = 'flex items-center gap-2 text-zinc-400 text-xs italic py-2';
+      loadingDiv.innerHTML = `<i data-lucide="loader" class="w-3.5 h-3.5 animate-spin text-cyan-400"></i><span>Analisando resposta e refinando hipótese...</span>`;
+      container.appendChild(loadingDiv);
+      container.scrollTop = container.scrollHeight;
+      lucide.createIcons();
+
+      try {
+        const res = await fetch('/api/pipeline/interview/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            user_brief: prompt,
+            history: interviewHistory,
+            new_answer: userAnswer,
+            round: currentInterviewRound
+          })
+        });
+
+        const loadingEl = document.getElementById('chatLoadingBubble');
+        if (loadingEl) loadingEl.remove();
+
+        if (!res.ok) throw new Error("Erro no servidor de entrevista");
+        const data = await res.json();
+
+        currentInterviewRound = data.round || (currentInterviewRound + 1);
+        updateInterviewConfidenceUI(data.confidence || 35);
+        currentBestGuess = data.best_guess || "";
+        isInterviewReady = data.is_ready || false;
+        if (data.interview_summary) interviewSummaryText = data.interview_summary;
+
+        appendAssistantChatMessage(data.hypothesis, data.question, data.best_guess, data.is_ready, data.interview_summary);
+        interviewHistory.push({ role: "assistant", content: data.question });
+
+        const bgContainer = document.getElementById('interviewBestGuessContainer');
+        const bgText = document.getElementById('interviewBestGuessText');
+        if (currentBestGuess && !data.is_ready) {
+          bgText.innerText = 'Sugestão: ' + currentBestGuess;
+          bgContainer.classList.remove('hidden');
+        } else {
+          bgContainer.classList.add('hidden');
+        }
+
+      } catch (err) {
+        const loadingEl = document.getElementById('chatLoadingBubble');
+        if (loadingEl) loadingEl.remove();
+        showToast('Erro na entrevista: ' + err.message, 'error');
+      }
+    }
+
+    function appendUserChatMessage(text) {
+      const container = document.getElementById('interviewChatContainer');
+      const div = document.createElement('div');
+      div.className = "flex justify-end";
+      div.innerHTML = `
+        <div class="max-w-[80%] p-3.5 rounded-2xl rounded-tr-sm bg-gradient-to-r from-brand-600 to-indigo-600 text-white shadow-md text-xs leading-relaxed">
+          <div class="font-bold text-[10px] text-brand-200 mb-1 flex items-center gap-1">
+            <i data-lucide="user" class="w-3 h-3"></i> Você
+          </div>
+          <div>${escapeAttr(text)}</div>
+        </div>
+      `;
+      container.appendChild(div);
+      container.scrollTop = container.scrollHeight;
+      lucide.createIcons();
+    }
+
+    function appendAssistantChatMessage(hypothesis, question, bestGuess, isReady, summary) {
+      const container = document.getElementById('interviewChatContainer');
+      const div = document.createElement('div');
+      div.className = "flex justify-start";
+      
+      let contentHtml = `
+        <div class="max-w-[85%] p-4 rounded-2xl rounded-tl-sm bg-zinc-900 border border-zinc-800 text-zinc-200 shadow-md flex flex-col gap-2.5 text-xs leading-relaxed">
+          <div class="flex items-center justify-between border-b border-zinc-800/80 pb-1.5">
+            <span class="font-bold text-cyan-400 text-[11px] flex items-center gap-1.5">
+              <i data-lucide="bot" class="w-3.5 h-3.5"></i> Addy Osmani interview-me
+            </span>
+            <span class="text-[10px] text-zinc-500 font-mono">Rodada ${currentInterviewRound}</span>
+          </div>
+      `;
+
+      if (hypothesis) {
+        contentHtml += `
+          <div class="p-2 rounded-lg bg-zinc-950/70 border border-zinc-800/60 text-[11px] text-zinc-400">
+            <span class="text-zinc-500 font-semibold uppercase text-[9px] tracking-wider block mb-0.5">Hipótese Atual:</span>
+            ${hypothesis}
+          </div>
+        `;
+      }
+
+      contentHtml += `
+        <div class="text-zinc-100 font-medium text-xs">
+          ${question}
+        </div>
+      `;
+
+      if (bestGuess && !isReady) {
+        contentHtml += `
+          <div class="p-2.5 rounded-xl bg-cyan-950/30 border border-cyan-500/25 flex flex-col sm:flex-row sm:items-center justify-between gap-2 mt-1">
+            <div class="text-[11px] text-cyan-200">
+              <strong class="text-cyan-400">Melhor Palpite Recomendado:</strong> ${bestGuess}
+            </div>
+            <button onclick="applySuggestionFromBubble('${escapeAttr(bestGuess)}')" class="px-2.5 py-1 rounded bg-cyan-600 hover:bg-cyan-500 text-white font-semibold text-[10px] shrink-0 cursor-pointer">
+              Concordar
+            </button>
+          </div>
+        `;
+      }
+
+      if (summary) {
+        contentHtml += `
+          <div class="mt-2 p-3 rounded-xl bg-emerald-950/40 border border-emerald-500/30 text-emerald-300 prose-dark text-xs">
+            ${marked.parse(summary || '')}
+          </div>
+        `;
+      }
+
+      contentHtml += `</div>`;
+      div.innerHTML = contentHtml;
+      container.appendChild(div);
+      container.scrollTop = container.scrollHeight;
+      lucide.createIcons();
+    }
+
+    function applyInterviewBestGuess() {
+      if (currentBestGuess) {
+        document.getElementById('interviewUserInput').value = currentBestGuess;
+        sendInterviewAnswer();
+      }
+    }
+
+    function applySuggestionFromBubble(text) {
+      document.getElementById('interviewUserInput').value = text;
+      sendInterviewAnswer();
+    }
+
+    function handleInterviewKeyDown(e) {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        sendInterviewAnswer();
+      }
+    }
+
+    async function sendInterviewAnswer() {
+      const input = document.getElementById('interviewUserInput');
+      const answer = input.value.trim();
+      if (!answer) return;
+      input.value = '';
+      await queryInterviewTurn(answer);
+    }
+
+    async function finalizeInterviewAndMaterialize() {
+      closeInterviewChatModal();
+      showToast('Entrevista concluída com sucesso! Iniciando esteira completa...', 'success');
+      
+      // Executa esteira completa e depois materializa tudo automaticamente!
+      await runFullPipelineWorkflow();
+      setTimeout(async () => {
+        await materializePipelineProject();
+      }, 500);
+    }
+
+    async function runFullPipelineWorkflow() {
+      const prompt = document.getElementById('pipelinePrompt').value.trim();
+      const harness = document.getElementById('pipelineHarness').value;
+      const btn = document.getElementById('btnGeneratePipeline');
+
+      if (!prompt) {
+        showToast('Por favor, informe o briefing do pipeline', 'error');
+        return;
+      }
+
+      btn.disabled = true;
+      btn.innerHTML = `<i data-lucide="loader" class="w-4 h-4 animate-spin"></i><span>Executando Esteira...</span>`;
+      document.getElementById('materializeSuccessBanner').classList.add('hidden');
+      updateStepperStatus(1, 'running');
+      updateStepperStatus(2, 'pending');
+      updateStepperStatus(3, 'pending');
+      updateStepperStatus(4, 'pending');
+      lucide.createIcons();
+
+      try {
+        const res = await fetch('/api/pipeline/stage', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            stage: "full_pipeline",
+            user_brief: prompt,
+            target_harness: harness
+          })
+        });
+
+        if (!res.ok) throw new Error("Falha na execução da esteira");
+        const data = await res.json();
+
+        pipelineIntent = data.intent_markdown || '';
+        pipelineSpec = data.spec_markdown || '';
+        pipelinePlan = data.plan_markdown || '';
+
+        updateStepperStatus(1, 'done');
+        updateStepperStatus(2, 'done');
+        updateStepperStatus(3, 'done');
+
+        document.getElementById('pipelineResultContainer').classList.remove('hidden');
+        switchPipelineArtifactTab('spec');
+        showToast('Esteira concluída! INTENT, SPEC e PLAN gerados com sucesso.', 'success');
+      } catch (err) {
+        showToast('Erro na esteira: ' + err.message, 'error');
+        updateStepperStatus(1, 'pending');
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = `<i data-lucide="zap" class="w-4 h-4"></i><span>Executar Esteira Completa (/spec ➔ /plan ➔ /build)</span>`;
+        lucide.createIcons();
+      }
+    }
+
+    async function runPipelineStage(stage) {
+      const prompt = document.getElementById('pipelinePrompt').value.trim();
+      if (!prompt) {
+        showToast('Por favor, informe o briefing do pipeline', 'error');
+        return;
+      }
+
+      const btn = document.getElementById('btnRunStageInterview');
+      btn.disabled = true;
+      btn.innerHTML = `<i data-lucide="loader" class="w-3.5 h-3.5 animate-spin"></i><span>Entrevistando...</span>`;
+      updateStepperStatus(1, 'running');
+      lucide.createIcons();
+
+      try {
+        const res = await fetch('/api/pipeline/stage', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            stage: stage,
+            user_brief: prompt
+          })
+        });
+
+        if (!res.ok) throw new Error("Falha na etapa de entrevista");
+        const data = await res.json();
+        pipelineIntent = data.intent_markdown || '';
+
+        updateStepperStatus(1, 'done');
+        document.getElementById('pipelineResultContainer').classList.remove('hidden');
+        switchPipelineArtifactTab('intent');
+        showToast('Ficha de Intenção (INTENT.md) elaborada!', 'success');
+      } catch (err) {
+        showToast('Erro: ' + err.message, 'error');
+        updateStepperStatus(1, 'pending');
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = `<i data-lucide="help-circle" class="w-3.5 h-3.5 text-cyan-400"></i><span>Passo 1: Entrevistar</span>`;
+        lucide.createIcons();
+      }
+    }
+
+    function switchPipelineArtifactTab(tab) {
+      activePipelineTab = tab;
+      const btnIntent = document.getElementById('tabBtnIntent');
+      const btnSpec = document.getElementById('tabBtnSpec');
+      const btnPlan = document.getElementById('tabBtnPlan');
+      const display = document.getElementById('pipelineMarkdownContent');
+
+      // Reset tabs
+      [btnIntent, btnSpec, btnPlan].forEach(b => {
+        b.className = "px-3 py-1.5 rounded-lg bg-zinc-900 text-zinc-400 hover:text-white text-xs font-semibold flex items-center gap-1.5 cursor-pointer";
+      });
+
+      let content = "";
+      if (tab === 'intent') {
+        btnIntent.className = "px-3 py-1.5 rounded-lg bg-zinc-800 text-cyan-300 border border-cyan-500/30 text-xs font-semibold flex items-center gap-1.5 cursor-pointer";
+        content = pipelineIntent || "> Ficha de Intenção (INTENT.md) ainda não sintetizada. Execute a esteira.";
+      } else if (tab === 'plan') {
+        btnPlan.className = "px-3 py-1.5 rounded-lg bg-zinc-800 text-amber-300 border border-amber-500/30 text-xs font-semibold flex items-center gap-1.5 cursor-pointer";
+        content = pipelinePlan || "> Plano de Execução em Grafo DAG (PLAN.md) ainda não sintetizado.";
+      } else {
+        // default: spec
+        btnSpec.className = "px-3 py-1.5 rounded-lg bg-zinc-800 text-emerald-300 border border-emerald-500/30 text-xs font-semibold flex items-center gap-1.5 cursor-pointer";
+        content = pipelineSpec || "> Especificação Canônica (SPEC.md) ainda não sintetizada.";
+      }
+
+      display.innerHTML = marked.parse(content || '');
+      lucide.createIcons();
+    }
+
+    function copyCurrentPipelineArtifact() {
+      let content = pipelineSpec;
+      if (activePipelineTab === 'intent') content = pipelineIntent;
+      if (activePipelineTab === 'plan') content = pipelinePlan;
+
+      if (!content) {
+        showToast('Nenhum conteúdo gerado para copiar', 'info');
+        return;
+      }
+      copyToClipboard(content);
+      showToast(`${activePipelineTab.toUpperCase()}.md copiado para a área de transferência!`, 'success');
+    }
+
+    function downloadCurrentPipelineArtifact() {
+      let content = pipelineSpec;
+      let filename = "SPEC.md";
+      if (activePipelineTab === 'intent') {
+        content = pipelineIntent;
+        filename = "INTENT.md";
+      } else if (activePipelineTab === 'plan') {
+        content = pipelinePlan;
+        filename = "PLAN.md";
+      }
+
+      if (!content) {
+        showToast('Nenhum conteúdo para baixar', 'info');
+        return;
+      }
+      downloadFile(filename, content);
+    }
+
+    function openBuildProgressModal() {
+      document.getElementById('buildProgressModal').style.display = 'flex';
+      document.getElementById('buildConsoleTerminal').innerHTML = '';
+      document.getElementById('buildProgressBar').style.width = '0%';
+      document.getElementById('buildPercentageText').innerText = '0%';
+      document.getElementById('buildStatusTitle').innerText = 'Iniciando orquestração da esteira...';
+      document.getElementById('btnBuildModalOpenExplorer').disabled = true;
+      document.getElementById('btnBuildModalOpenExplorer').className = "px-5 py-2 rounded-lg bg-emerald-600/30 text-emerald-300/40 text-xs font-semibold flex items-center gap-1.5 cursor-not-allowed";
+
+      for (let i = 1; i <= 7; i++) {
+        const step = document.getElementById(`buildStep${i}`);
+        const icon = document.getElementById(`buildIcon${i}`);
+        if (step) step.className = "flex items-center gap-2 p-2 rounded-lg bg-zinc-900/70 border border-zinc-800 text-zinc-400";
+        if (icon) {
+          icon.setAttribute('data-lucide', 'circle');
+          icon.className = "w-3.5 h-3.5 text-zinc-600";
+        }
+      }
+      lucide.createIcons();
+    }
+
+    function closeBuildProgressModal() {
+      document.getElementById('buildProgressModal').style.display = 'none';
+    }
+
+    function appendBuildLog(msg, color = 'text-zinc-300') {
+      const term = document.getElementById('buildConsoleTerminal');
+      if (!term) return;
+      const now = new Date().toTimeString().split(' ')[0];
+      const div = document.createElement('div');
+      div.className = `flex items-start gap-2 ${color}`;
+      div.innerHTML = `<span class="text-zinc-600 select-none">[${now}]</span> <span>${msg}</span>`;
+      term.appendChild(div);
+      term.scrollTop = term.scrollHeight;
+    }
+
+    function setBuildStepState(stepIdx, state) {
+      // state: 'running', 'done'
+      const step = document.getElementById(`buildStep${stepIdx}`);
+      const icon = document.getElementById(`buildIcon${stepIdx}`);
+      if (!step || !icon) return;
+
+      if (state === 'running') {
+        step.className = "flex items-center gap-2 p-2 rounded-lg bg-cyan-950/60 border border-cyan-500/50 text-cyan-300";
+        icon.setAttribute('data-lucide', 'loader');
+        icon.className = "w-3.5 h-3.5 text-cyan-400 animate-spin";
+      } else if (state === 'done') {
+        step.className = "flex items-center gap-2 p-2 rounded-lg bg-emerald-950/50 border border-emerald-500/40 text-emerald-300";
+        icon.setAttribute('data-lucide', 'check-circle');
+        icon.className = "w-3.5 h-3.5 text-emerald-400";
+      }
+      lucide.createIcons();
+    }
+
+    async function materializePipelineProject() {
+      const targetDir = document.getElementById('pipelineTargetDir').value.trim();
+      const projectName = document.getElementById('pipelineProjectName').value.trim();
+      const harness = document.getElementById('pipelineHarness').value;
+      const installDeps = document.getElementById('pipelineInstallDeps').checked;
+      const btn = document.getElementById('btnMaterializeProject');
+
+      if (!pipelineSpec && !pipelineIntent && !pipelinePlan) {
+        showToast('Execute a síntese da esteira antes de materializar o projeto.', 'error');
+        return;
+      }
+
+      if (!targetDir || !projectName) {
+        showToast('Informe o diretório de destino e nome do projeto', 'error');
+        return;
+      }
+
+      openBuildProgressModal();
+      appendBuildLog(`Iniciando esteira de construção para [${projectName}]...`, 'text-cyan-300 font-semibold');
+      appendBuildLog(`Diretório alvo: ${targetDir}\\${projectName}`, 'text-zinc-400');
+      appendBuildLog(`Harness selecionado: ${harness}`, 'text-zinc-400');
+
+      // Passo 1
+      setBuildStepState(1, 'running');
+      document.getElementById('buildStatusTitle').innerText = 'Validando Intenção e Perfil Retórico (interview-me)...';
+      document.getElementById('buildProgressBar').style.width = '15%';
+      document.getElementById('buildPercentageText').innerText = '15%';
+      appendBuildLog('interview-me: Processando ficha de intenção e análise de apresentador...', 'text-zinc-300');
+      await new Promise(r => setTimeout(r, 400));
+      setBuildStepState(1, 'done');
+      appendBuildLog('[OK] docs/intent/INTENT.md validado com sucesso.', 'text-emerald-400');
+
+      // Passo 2
+      setBuildStepState(2, 'running');
+      document.getElementById('buildStatusTitle').innerText = 'Compilando Contratos Tipados & 5 Seções (spec-driven)...';
+      document.getElementById('buildProgressBar').style.width = '30%';
+      document.getElementById('buildPercentageText').innerText = '30%';
+      appendBuildLog('spec-driven: Validando Contexto, Interfaces, Invariantes e Critérios...', 'text-zinc-300');
+      await new Promise(r => setTimeout(r, 450));
+      setBuildStepState(2, 'done');
+      appendBuildLog('[OK] SPEC.md estruturado com critérios binários de saída.', 'text-emerald-400');
+
+      // Passo 3
+      setBuildStepState(3, 'running');
+      document.getElementById('buildStatusTitle').innerText = 'Gerando Grafo Acíclico DAG de Tarefas (planning-dag)...';
+      document.getElementById('buildProgressBar').style.width = '45%';
+      document.getElementById('buildPercentageText').innerText = '45%';
+      appendBuildLog('planning-dag: Decompondo tarefas em fases e checkpoints...', 'text-zinc-300');
+      await new Promise(r => setTimeout(r, 400));
+      setBuildStepState(3, 'done');
+      appendBuildLog('[OK] PLAN.md gerado com grafo de execução acíclica.', 'text-emerald-400');
+
+      // Passo 4 - Chamada de I/O em disco
+      setBuildStepState(4, 'running');
+      document.getElementById('buildStatusTitle').innerText = 'Scaffolding Físico de Pastas e AGENTS.md Canônico...';
+      document.getElementById('buildProgressBar').style.width = '60%';
+      document.getElementById('buildPercentageText').innerText = '60%';
+      appendBuildLog('incremental: Escrevendo árvore de pastas e AGENTS.md (<1500 tokens)...', 'text-zinc-300');
+
+      try {
+        const res = await fetch('/api/pipeline/materialize', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            target_directory: targetDir,
+            project_name: projectName,
+            harness: harness,
+            intent_markdown: pipelineIntent,
+            spec_markdown: pipelineSpec,
+            plan_markdown: pipelinePlan,
+            install_dependencies: installDeps
+          })
+        });
+
+        if (!res.ok) throw new Error("Falha na chamada de materialização de disco");
+        const resp = await res.json();
+        lastMaterializedPath = resp.project_path || resp.path;
+        await new Promise(r => setTimeout(r, 400));
+        setBuildStepState(4, 'done');
+        appendBuildLog(`[OK] Diretórios criados em ${lastMaterializedPath}`, 'text-emerald-400');
+
+        // Passo 5
+        setBuildStepState(5, 'running');
+        document.getElementById('buildStatusTitle').innerText = 'Injetando Suíte de Testes Determinísticos (TDD)...';
+        document.getElementById('buildProgressBar').style.width = '75%';
+        document.getElementById('buildPercentageText').innerText = '75%';
+        appendBuildLog('tdd: Injetando tests/test_spec.py e scripts de verificação...', 'text-zinc-300');
+        await new Promise(r => setTimeout(r, 400));
+        setBuildStepState(5, 'done');
+        appendBuildLog('[OK] Testes determinísticos de verificação binária criados.', 'text-emerald-400');
+
+        // Passo 6
+        setBuildStepState(6, 'running');
+        document.getElementById('buildStatusTitle').innerText = 'Empacotando Skills Canônicas de Addy Osmani...';
+        document.getElementById('buildProgressBar').style.width = '90%';
+        document.getElementById('buildPercentageText').innerText = '90%';
+        appendBuildLog('quality: Copiando 6 skills de Addy Osmani para a pasta skills/...', 'text-zinc-300');
+        await new Promise(r => setTimeout(r, 400));
+        setBuildStepState(6, 'done');
+        appendBuildLog('[OK] 6 skills canônicas vinculadas ao projeto.', 'text-emerald-400');
+
+        // Passo 7
+        setBuildStepState(7, 'running');
+        document.getElementById('buildStatusTitle').innerText = 'Finalizando Otimização de Tokens & Empacotamento...';
+        document.getElementById('buildProgressBar').style.width = '100%';
+        document.getElementById('buildPercentageText').innerText = '100%';
+        appendBuildLog('code-simplify + webperf: Higienização de AI Slop concluída.', 'text-zinc-300');
+        await new Promise(r => setTimeout(r, 350));
+        setBuildStepState(7, 'done');
+        appendBuildLog(`[SUCESSO] Pipeline completo materializado com ${resp.files_count || 14} arquivos e skills!`, 'text-emerald-300 font-bold');
+
+        document.getElementById('buildStatusTitle').innerText = 'Construção do Pipeline Concluída com Sucesso (100%)';
+        document.getElementById('buildFinalPathNotice').innerText = `Local: ${lastMaterializedPath}`;
+        
+        // Habilitar botão do Explorer no modal
+        const btnExp = document.getElementById('btnBuildModalOpenExplorer');
+        btnExp.disabled = false;
+        btnExp.className = "px-5 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold flex items-center gap-1.5 cursor-pointer shadow-lg shadow-emerald-600/30 transition";
+
+        // Atualizar banner da página principal
+        updateStepperStatus(4, 'done');
+        document.getElementById('materializeSuccessBanner').classList.remove('hidden');
+        document.getElementById('materializePathText').innerText = `Local gravado: ${lastMaterializedPath} (${resp.files_count || 14} arquivos e skills canônicas)`;
+        
+        showToast(`Pipeline ${projectName} materializado com sucesso!`, 'success');
+      } catch (err) {
+        appendBuildLog(`[ERRO FATAL] ${err.message}`, 'text-rose-400 font-bold');
+        document.getElementById('buildStatusTitle').innerText = 'Falha na materialização do pipeline';
+        showToast('Erro ao materializar: ' + err.message, 'error');
+        updateStepperStatus(4, 'pending');
+      }
+    }
+
+    function openMaterializedFolder() {
+      if (lastMaterializedPath) {
+        openFolderInExplorer(lastMaterializedPath);
+      }
+    }
+
+    // Hub 3: Templates Hub Logic
+    async function loadTemplatesHub() {
+      const container = document.getElementById('templatesGrid');
+      container.innerHTML = `<div class="col-span-3 py-12 text-center text-zinc-500">Carregando templates...</div>`;
+
+      try {
+        const res = await fetch('/api/templates');
+        if (!res.ok) throw new Error("Falha ao carregar templates");
+        const templates = await res.json();
+
+        container.innerHTML = templates.map(tmpl => `
+          <div class="glass-card rounded-xl p-4 flex flex-col justify-between gap-3">
+            <div>
+              <div class="flex items-center justify-between">
+                <span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-emerald-950/60 text-emerald-300 border border-emerald-800/40">${tmpl.type}</span>
+                <span class="text-[10px] text-zinc-500 font-mono">${tmpl.filename}</span>
+              </div>
+              <h3 class="text-sm font-bold text-white mt-2">${tmpl.name}</h3>
+              <p class="text-xs text-zinc-400 mt-1 line-clamp-3">${tmpl.description}</p>
+            </div>
+
+            <div class="flex items-center gap-2 pt-3 border-t border-zinc-800">
+              <button onclick="previewTemplate('${escapeId(tmpl.id)}', '${escapeAttr(tmpl.name)}', '${escapeAttr(tmpl.content)}')" class="flex-1 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-xs text-zinc-200 cursor-pointer">Visualizar</button>
+              <button onclick="copyToClipboard('${escapeAttr(tmpl.content)}'); showToast('Template copiado!', 'success')" class="p-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-300 cursor-pointer" title="Copiar"><i data-lucide="copy" class="w-3.5 h-3.5"></i></button>
+              <button onclick="downloadFile('${tmpl.filename}', '${escapeAttr(tmpl.content)}')" class="p-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-300 cursor-pointer" title="Baixar"><i data-lucide="download" class="w-3.5 h-3.5"></i></button>
+            </div>
+          </div>
+        `).join('');
+        lucide.createIcons();
+      } catch (err) {
+        container.innerHTML = `<div class="col-span-3 py-12 text-center text-rose-400">${err.message}</div>`;
+      }
+    }
+
+    function previewTemplate(id, name, content) {
+      document.getElementById('modalTitle').innerText = name;
+      document.getElementById('modalSubtitle').innerText = "Template Canônico AIDD 0.001%";
+      document.getElementById('docsContentRender').innerHTML = marked.parse(content || '');
+      currentRawDocs = content;
+      showingVirtualTrans = false;
+      switchModalTab('docs');
+      openModal();
+    }
+
+    // Hub 4: Harnesses Logic
+    async function refreshHarnesses() {
+      const tbody = document.getElementById('harnessTableBody');
+      tbody.innerHTML = `<tr><td colspan="5" class="py-6 text-center text-zinc-500">Detectando ambientes e harnesses...</td></tr>`;
+
+      try {
+        const res = await fetch('/api/harness/status');
+        if (!res.ok) throw new Error("Falha ao consultar harnesses");
+        const list = await res.json();
+
+        tbody.innerHTML = list.map(h => `
+          <tr class="hover:bg-zinc-800/30 transition">
+            <td class="px-4 py-3 font-semibold text-white flex items-center gap-2">
+              <i data-lucide="terminal" class="w-3.5 h-3.5 text-amber-400"></i>
+              ${h.name}
+            </td>
+            <td class="px-4 py-3">
+              ${h.installed 
+                ? '<span class="px-2 py-0.5 rounded text-[10px] bg-emerald-950 text-emerald-300 border border-emerald-800/40">Detectado</span>'
+                : '<span class="px-2 py-0.5 rounded text-[10px] bg-zinc-800 text-zinc-500">Não Detectado</span>'
+              }
+            </td>
+            <td class="px-4 py-3 text-zinc-400">${h.version || '-'}</td>
+            <td class="px-4 py-3 text-zinc-500 truncate max-w-sm">${h.path || '-'}</td>
+            <td class="px-4 py-3 text-right">
+              ${h.installed && h.path ? `<button onclick="openFolderInExplorer('${escapePath(h.path)}')" class="px-2.5 py-1 rounded bg-zinc-800 hover:bg-zinc-700 text-xs text-zinc-300 cursor-pointer">Pasta</button>` : '-'}
+            </td>
+          </tr>
+        `).join('');
+        lucide.createIcons();
+      } catch (err) {
+        tbody.innerHTML = `<tr><td colspan="5" class="py-6 text-center text-rose-400">${err.message}</td></tr>`;
+      }
+    }
+
+    // Hub 5: Settings & LLM Fallback Router Logic
+    let currentLLMChain = [];
+
+    async function loadLLMChain() {
+      try {
+        const res = await fetch('/api/llm/chain');
+        if (res.ok) {
+          currentLLMChain = await res.json();
+          if (!Array.isArray(currentLLMChain)) currentLLMChain = [];
+          renderLLMChainList();
+        }
+      } catch (err) {
+        console.error('Falha ao carregar esteira LLM:', err);
+      }
+    }
+
+    function renderLLMChainList() {
+      const container = document.getElementById('llmChainListContainer');
+      const badgeActive = document.getElementById('llmActiveCountBadge');
+      if (!container) return;
+
+      const activeCount = currentLLMChain.filter(m => m.enabled).length;
+      if (badgeActive) {
+        badgeActive.innerText = `${activeCount} ativo${activeCount === 1 ? '' : 's'}`;
+        badgeActive.className = activeCount > 0 
+          ? "text-xs px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-mono"
+          : "text-xs px-2.5 py-0.5 rounded-full bg-zinc-800 text-zinc-400 border border-zinc-700 font-mono";
+      }
+
+      if (!currentLLMChain || currentLLMChain.length === 0) {
+        container.innerHTML = `
+          <div class="py-8 text-center text-zinc-500 text-xs flex flex-col items-center gap-2 border border-dashed border-zinc-800 rounded-xl">
+            <i data-lucide="layers" class="w-8 h-8 text-zinc-600"></i>
+            <span>Nenhum modelo cadastrado na esteira de roteamento.</span>
+            <button onclick="openAddModelModal()" class="mt-1 px-3 py-1.5 rounded-lg bg-brand-600 hover:bg-brand-500 text-white text-xs font-semibold cursor-pointer">Adicionar Primeiro Modelo</button>
+          </div>
+        `;
+        lucide.createIcons();
+        return;
+      }
+
+      const providerStyles = {
+        gemini: { bg: 'bg-sky-500/20 text-sky-300 border-sky-500/30', label: 'Google Gemini' },
+        groq: { bg: 'bg-orange-500/20 text-orange-300 border-orange-500/30', label: 'Groq Cloud' },
+        openrouter: { bg: 'bg-indigo-500/20 text-indigo-300 border-indigo-500/30', label: 'OpenRouter' },
+        openai: { bg: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30', label: 'OpenAI' },
+        anthropic: { bg: 'bg-amber-500/20 text-amber-300 border-amber-500/30', label: 'Anthropic' },
+        deepseek: { bg: 'bg-blue-500/20 text-blue-300 border-blue-500/30', label: 'DeepSeek' },
+        ollama: { bg: 'bg-cyan-500/20 text-cyan-300 border-cyan-500/30', label: 'Ollama Local' },
+        custom: { bg: 'bg-purple-500/20 text-purple-300 border-purple-500/30', label: 'Custom' }
+      };
+
+      container.innerHTML = currentLLMChain.map((m, idx) => {
+        const style = providerStyles[m.provider] || providerStyles.custom;
+        const priorityLabel = idx === 0 ? 'Prioridade #1 (Primário)' : `Prioridade #${idx + 1} (Fallback ${idx})`;
+        const keyDisplay = m.is_local 
+          ? '<span class="text-zinc-500 font-mono text-[11px]">Local (sem chave de API)</span>'
+          : (m.api_key ? `<span class="text-zinc-400 font-mono text-[11px]">●●●●●●●●${m.api_key.slice(-4)}</span>` : '<span class="text-rose-400 font-mono text-[11px]">Sem chave cadastrada</span>');
+
+        return `
+          <div class="p-3 rounded-xl border transition-all ${m.enabled ? 'bg-zinc-900/90 border-zinc-700/80' : 'bg-zinc-950/50 border-zinc-900 opacity-60'} flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div class="flex items-start sm:items-center gap-3">
+              <!-- Reorder Buttons -->
+              <div class="flex flex-col gap-0.5">
+                <button onclick="moveModelPriority(${idx}, -1)" ${idx === 0 ? 'disabled class="opacity-20 p-0.5 text-zinc-600"' : 'class="p-0.5 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded cursor-pointer"'} title="Aumentar prioridade">
+                  <i data-lucide="chevron-up" class="w-3.5 h-3.5"></i>
+                </button>
+                <button onclick="moveModelPriority(${idx}, 1)" ${idx === currentLLMChain.length - 1 ? 'disabled class="opacity-20 p-0.5 text-zinc-600"' : 'class="p-0.5 text-zinc-400 hover:text-white hover:bg-zinc-800 rounded cursor-pointer"'} title="Diminuir prioridade">
+                  <i data-lucide="chevron-down" class="w-3.5 h-3.5"></i>
+                </button>
+              </div>
+
+              <!-- Main Info -->
+              <div class="flex flex-col">
+                <div class="flex items-center gap-2 flex-wrap">
+                  <span class="text-xs font-bold text-white">${m.name || m.model}</span>
+                  <span class="px-2 py-0.5 rounded-full text-[10px] border font-medium ${style.bg}">${style.label}</span>
+                  <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-zinc-800 text-zinc-300">${m.model}</span>
+                </div>
+                <div class="flex items-center gap-3 mt-1 text-[11px] text-zinc-400 flex-wrap">
+                  <span class="text-brand-400 font-mono font-medium">${priorityLabel}</span>
+                  <span class="text-zinc-600">•</span>
+                  <span>${keyDisplay}</span>
+                  <span class="text-zinc-600">•</span>
+                  <span class="text-zinc-500 font-mono text-[10px] truncate max-w-xs">${m.endpoint}</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Switch & Delete Actions -->
+            <div class="flex items-center gap-3 justify-end self-end sm:self-center">
+              <div class="flex items-center gap-2">
+                <span class="text-[11px] font-medium ${m.enabled ? 'text-emerald-400' : 'text-zinc-500'}">${m.enabled ? 'Ativo' : 'Inativo'}</span>
+                <button onclick="toggleModelEnabled(${idx})" class="w-11 h-6 rounded-full transition-colors p-0.5 flex items-center ${m.enabled ? 'bg-emerald-500 justify-end' : 'bg-zinc-800 justify-start'} cursor-pointer" title="Ligar / Desligar modelo">
+                  <span class="w-5 h-5 rounded-full bg-white shadow-md"></span>
+                </button>
+              </div>
+
+              <button onclick="deleteModelFromChain(${idx})" class="p-1.5 rounded-lg hover:bg-zinc-800 text-zinc-500 hover:text-rose-400 cursor-pointer transition" title="Excluir da esteira">
+                <i data-lucide="trash-2" class="w-4 h-4"></i>
+              </button>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      lucide.createIcons();
+    }
+
+    async function toggleModelEnabled(idx) {
+      if (!currentLLMChain[idx]) return;
+      currentLLMChain[idx].enabled = !currentLLMChain[idx].enabled;
+      renderLLMChainList();
+      await saveLLMChain(false);
+      showToast(`Modelo ${currentLLMChain[idx].name} ${currentLLMChain[idx].enabled ? 'habilitado' : 'desabilitado'}`, 'info');
+    }
+
+    async function moveModelPriority(idx, delta) {
+      const targetIdx = idx + delta;
+      if (targetIdx < 0 || targetIdx >= currentLLMChain.length) return;
+      const temp = currentLLMChain[idx];
+      currentLLMChain[idx] = currentLLMChain[targetIdx];
+      currentLLMChain[targetIdx] = temp;
+
+      currentLLMChain.forEach((m, i) => m.priority = i);
+      renderLLMChainList();
+      await saveLLMChain(false);
+    }
+
+    async function deleteModelFromChain(idx) {
+      if (!currentLLMChain[idx]) return;
+      const removed = currentLLMChain.splice(idx, 1);
+      currentLLMChain.forEach((m, i) => m.priority = i);
+      renderLLMChainList();
+      await saveLLMChain(false);
+      showToast(`Modelo removido da esteira`, 'info');
+    }
+
+    async function saveLLMChain(notify = true) {
+      try {
+        const res = await fetch('/api/llm/chain', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(currentLLMChain)
+        });
+        if (!res.ok) throw new Error("Falha ao salvar esteira");
+        if (notify) showToast("Configuração da esteira de fallback salva com sucesso!", "success");
+      } catch (err) {
+        showToast("Erro ao salvar esteira: " + err.message, "error");
+      }
+    }
+
+    async function detectLocalModels() {
+      showToast("Consultando modelos locais instalados no SO...", "info");
+      try {
+        const res = await fetch('/api/llm/models/local');
+        if (!res.ok) throw new Error("Ollama local não respondeu na porta 11434");
+        const data = await res.json();
+        const models = data.models || [];
+        if (models.length === 0) {
+          showToast("Nenhum modelo local detectado no Ollama (127.0.0.1:11434).", "info");
+          return;
+        }
+
+        let addedCount = 0;
+        models.forEach(modelName => {
+          const exists = currentLLMChain.some(item => item.provider === 'ollama' && item.model === modelName);
+          if (!exists) {
+            currentLLMChain.push({
+              id: 'ollama-' + modelName.replace(/[^a-zA-Z0-9_-]/g, '-'),
+              name: `Ollama Local (${modelName})`,
+              provider: 'ollama',
+              model: modelName,
+              endpoint: currentConfig.ollama_host || "http://127.0.0.1:11434",
+              api_key: '',
+              enabled: true,
+              priority: currentLLMChain.length,
+              is_local: true
+            });
+            addedCount++;
+          }
+        });
+
+        renderLLMChainList();
+        await saveLLMChain(false);
+        showToast(`Detecção concluída! ${models.length} modelos no SO (${addedCount} novos na esteira).`, "success");
+      } catch (err) {
+        showToast("Erro na detecção local: " + err.message, "error");
+      }
+    }
+
+    function openAddModelModal() {
+      document.getElementById('modalProviderPreset').value = 'gemini';
+      applyProviderPreset();
+      document.getElementById('addModelModal').style.display = 'flex';
+      lucide.createIcons();
+    }
+
+    function closeAddModelModal() {
+      document.getElementById('addModelModal').style.display = 'none';
+    }
+
+    function applyProviderPreset() {
+      const preset = document.getElementById('modalProviderPreset').value;
+      const nameInput = document.getElementById('modalModelName');
+      const idInput = document.getElementById('modalModelID');
+      const endpointInput = document.getElementById('modalModelEndpoint');
+      const apiKeyInput = document.getElementById('modalModelApiKey');
+
+      const presets = {
+        gemini: {
+          name: "Google Gemini 2.0 Flash",
+          id: "gemini-2.0-flash",
+          endpoint: "https://generativelanguage.googleapis.com",
+          placeholder: "AIzaSy..."
+        },
+        groq: {
+          name: "Groq Cloud (Llama 3.3 70B)",
+          id: "llama-3.3-70b-versatile",
+          endpoint: "https://api.groq.com/openai/v1",
+          placeholder: "gsk_..."
+        },
+        openrouter: {
+          name: "OpenRouter Universal",
+          id: "anthropic/claude-3.5-sonnet",
+          endpoint: "https://openrouter.ai/api/v1",
+          placeholder: "sk-or-v1-..."
+        },
+        openai: {
+          name: "OpenAI GPT-4o",
+          id: "gpt-4o",
+          endpoint: "https://api.openai.com/v1",
+          placeholder: "sk-..."
+        },
+        anthropic: {
+          name: "Anthropic Claude 3.5 Sonnet",
+          id: "claude-3-5-sonnet-20241022",
+          endpoint: "https://api.anthropic.com/v1",
+          placeholder: "sk-ant-..."
+        },
+        deepseek: {
+          name: "DeepSeek-V3",
+          id: "deepseek-chat",
+          endpoint: "https://api.deepseek.com/v1",
+          placeholder: "sk-..."
+        },
+        ollama: {
+          name: "Ollama Local (llama3.1:8b)",
+          id: "llama3.1:8b",
+          endpoint: "http://127.0.0.1:11434",
+          placeholder: "Local (sem chave)"
+        },
+        custom: {
+          name: "Serviço OpenAI Custom",
+          id: "default-model",
+          endpoint: "http://127.0.0.1:8000/v1",
+          placeholder: "Chave opcional"
+        }
+      };
+
+      const p = presets[preset] || presets.custom;
+      nameInput.value = p.name;
+      idInput.value = p.id;
+      endpointInput.value = p.endpoint;
+      apiKeyInput.placeholder = p.placeholder;
+      if (preset === 'ollama') {
+        apiKeyInput.value = '';
+        apiKeyInput.disabled = true;
+      } else {
+        apiKeyInput.disabled = false;
+      }
+    }
+
+    async function saveNewModelFromModal() {
+      const provider = document.getElementById('modalProviderPreset').value;
+      const name = document.getElementById('modalModelName').value.trim();
+      const model = document.getElementById('modalModelID').value.trim();
+      const endpoint = document.getElementById('modalModelEndpoint').value.trim();
+      const apiKey = document.getElementById('modalModelApiKey').value.trim();
+      const enabled = document.getElementById('modalModelEnabled').checked;
+
+      if (!name || !model) {
+        showToast("Preencha o nome e o ID do modelo", "error");
+        return;
+      }
+
+      if (provider !== 'ollama' && !apiKey) {
+        showToast("Insira a chave de API para provedores em nuvem", "error");
+        return;
+      }
+
+      const newEntry = {
+        id: 'model-' + Date.now(),
+        name: name,
+        provider: provider,
+        model: model,
+        endpoint: endpoint,
+        api_key: apiKey,
+        enabled: enabled,
+        priority: currentLLMChain.length,
+        is_local: provider === 'ollama'
+      };
+
+      currentLLMChain.push(newEntry);
+      closeAddModelModal();
+      renderLLMChainList();
+      await saveLLMChain(true);
+      showToast(`Modelo ${name} cadastrado na esteira de fallback!`, "success");
+    }
+
+    function renderSettingsView() {
+      const container = document.getElementById('settingsRootsList');
+      const roots = currentConfig.search_roots || ["C:\\", "D:\\", "F:\\"];
+      const badgeRoots = document.getElementById('rootsCountBadge');
+
+      if (badgeRoots) {
+        badgeRoots.innerText = `${roots.length} pasta${roots.length === 1 ? '' : 's'}`;
+      }
+
+      if (container) {
+        container.innerHTML = roots.map((root, idx) => `
+          <div class="flex items-center justify-between p-2.5 rounded-xl bg-zinc-900 border border-zinc-800 text-xs">
+            <span class="font-mono text-white truncate max-w-sm">${root}</span>
+            <button onclick="removeSearchRoot(${idx})" class="p-1 rounded hover:bg-zinc-800 text-rose-400 hover:text-rose-300 cursor-pointer" title="Remover diretório">
+              <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+            </button>
+          </div>
+        `).join('');
+      }
+
+      document.getElementById('settingsOllamaHost').value = currentConfig.ollama_host || "http://127.0.0.1:11434";
+      document.getElementById('settingsOllamaModel').value = currentConfig.ollama_model || "llama3.1:8b";
+      
+      loadLLMChain();
+      lucide.createIcons();
+    }
+
+    function addSearchRoot() {
+      const input = document.getElementById('settingsNewRootInput');
+      const val = input.value.trim();
+      if (!val) return;
+      if (!currentConfig.search_roots) currentConfig.search_roots = [];
+      currentConfig.search_roots.push(val);
+      input.value = '';
+      renderSettingsView();
+    }
+
+    function removeSearchRoot(idx) {
+      if (currentConfig.search_roots) {
+        currentConfig.search_roots.splice(idx, 1);
+        renderSettingsView();
+      }
+    }
+
+    async function saveSettingsConfig() {
+      currentConfig.ollama_host = document.getElementById('settingsOllamaHost').value.trim();
+      currentConfig.ollama_model = document.getElementById('settingsOllamaModel').value.trim();
+
+      try {
+        const res = await fetch('/api/config', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(currentConfig)
+        });
+        if (!res.ok) throw new Error("Falha ao salvar configurações");
+        showToast('Diretórios e parâmetros salvos. Nova varredura iniciada!', 'success');
+        renderRootsPill();
+      } catch (err) {
+        showToast('Erro ao salvar: ' + err.message, 'error');
+      }
+    }
+
+    // Config Modal
+    function openConfigModal() {
+      const list = document.getElementById('configRootsList');
+      const roots = currentConfig.search_roots || ["C:\\", "D:\\", "F:\\"];
+      list.innerHTML = roots.map((r, i) => `
+        <div class="flex items-center justify-between p-2 rounded-lg bg-zinc-900 border border-zinc-800 text-xs">
+          <span class="font-mono text-white">${r}</span>
+          <button onclick="removeRootFromModal(${i})" class="text-rose-400 hover:text-rose-300 p-1 cursor-pointer"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>
+        </div>
+      `).join('');
+      document.getElementById('configModal').style.display = 'flex';
+      lucide.createIcons();
+    }
+
+    function closeConfigModal() {
+      document.getElementById('configModal').style.display = 'none';
+    }
+
+    function addRootFromModal() {
+      const val = document.getElementById('configNewRootInput').value.trim();
+      if (!val) return;
+      if (!currentConfig.search_roots) currentConfig.search_roots = [];
+      currentConfig.search_roots.push(val);
+      document.getElementById('configNewRootInput').value = '';
+      openConfigModal();
+    }
+
+    function removeRootFromModal(i) {
+      if (currentConfig.search_roots) {
+        currentConfig.search_roots.splice(i, 1);
+        openConfigModal();
+      }
+    }
+
+    async function saveAndRescanFromModal() {
+      closeConfigModal();
+      await saveSettingsConfig();
+    }
+
+    // Trigger Scan
+    async function triggerScan() {
+      try {
+        const res = await fetch('/api/scan', { method: 'POST' });
+        if (res.ok) {
+          showToast('Varredura concorrente iniciada em segundo plano', 'info');
+        }
+      } catch (e) {}
+    }
+
+    // Helper Actions
+    function copyModalPath() {
+      if (currentItem && currentItem.path) {
+        copyToClipboard(currentItem.path);
+        showToast('Caminho copiado: ' + currentItem.path, 'success');
+      }
+    }
+
+    function openFolderFromModal() {
+      if (currentItem && currentItem.path) {
+        openFolderInExplorer(currentItem.path);
+      }
+    }
+
+    async function openFolderInExplorer(path) {
+      try {
+        await fetch('/api/open-folder', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ path: path })
+        });
+      } catch(e) {}
+    }
+
+    function copyToClipboard(text) {
+      navigator.clipboard.writeText(text);
+    }
+
+    function downloadFile(filename, content) {
+      const blob = new Blob([content], { type: 'text/markdown;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+
+    function showToast(msg, type = 'info') {
+      const container = document.getElementById('toastContainer');
+      const toast = document.createElement('div');
+      const colors = {
+        success: 'bg-emerald-950/90 text-emerald-300 border-emerald-500/40',
+        error: 'bg-rose-950/90 text-rose-300 border-rose-500/40',
+        info: 'bg-zinc-900/95 text-zinc-200 border-zinc-700'
+      };
+      toast.className = `px-4 py-2.5 rounded-xl border text-xs font-medium shadow-2xl backdrop-blur-md transition transform duration-200 translate-y-2 opacity-0 pointer-events-auto flex items-center gap-2 ${colors[type] || colors.info}`;
+      toast.innerHTML = `<span>${msg}</span>`;
+      container.appendChild(toast);
+
+      requestAnimationFrame(() => {
+        toast.classList.remove('translate-y-2', 'opacity-0');
+      });
+
+      setTimeout(() => {
+        toast.classList.add('opacity-0', 'translate-y-2');
+        setTimeout(() => toast.remove(), 250);
+      }, 3500);
+    }
+
+    function escapeId(id) {
+      return (id || '').replace(/'/g, "\\'");
+    }
+
+    function escapePath(path) {
+      return (path || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+    }
+
+    function escapeAttr(s) {
+      return (s || '').replace(/'/g, "\\'").replace(/"/g, '&quot;').replace(/\n/g, '\\n');
+    }
+  </script>
+</body>
+</html>

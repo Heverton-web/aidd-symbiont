@@ -1,0 +1,26 @@
+# Binários compilados
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Cache de dados local
+catalog.json
+.symbiont/
+
+# Configurações com credenciais e caminhos locais
+config.json
+
+# IDEs
+.vscode/
+.idea/
+
+# Variáveis de ambiente e segredos
+.env
+.env*
+.env-*
+.env-*-*
+
+# Repositórios clonados locais
+addyosmani-skills/
